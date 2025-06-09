@@ -1,0 +1,28 @@
+version: "3.8"
+
+services:
+  nextjs:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "21011:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/postgres
+      - JWT_SECRET=hello_stockelper
+      - JWT_EXPIRES_IN=7d
+      - COOKIE_NAME=auth-token
+      - NEXT_PUBLIC_LLM_ENDPOINT=https://endpoint-for-your-llm-service
+    restart: unless-stopped
+    networks:
+      - stockelper
+
+volumes:
+  postgres_data:
+
+networks:
+  stockelper:
+    driver: bridge
+    name: stockelper
+    external: true
