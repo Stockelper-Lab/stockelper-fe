@@ -1,0 +1,82 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider      = "prisma-client-js"
+  output        = "../src/generated/prisma"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x", "windows", "darwin-arm64"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model users {
+  id               Int       @id @default(autoincrement())
+  email            String    @unique
+  password         String    @default("")
+  name             String    @default("")
+  nickname         String    @unique
+  kis_app_key      String
+  kis_app_secret   String
+  kis_access_token String?
+  account_no       String
+  investor_type    String    @default("안정형")
+  created_at       DateTime? @default(now()) @db.Timestamp(6)
+  updated_at       DateTime? @default(now()) @db.Timestamp(6)
+}
+
+model survey {
+  id         Int       @id @default(autoincrement())
+  user_id    Int
+  answer     Json
+  created_at DateTime? @default(now()) @db.Timestamp(6)
+  updated_at DateTime? @default(now()) @db.Timestamp(6)
+}
+
+model sessions {
+  id         Int      @id @default(autoincrement())
+  user_id    Int
+  token      String
+  expires_at DateTime
+}
+
+// 채팅방 (Conversation) 모델
+model Conversation {
+  id         String   @id @default(uuid()) // UUID 형식의 고유 식별자
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  lastActive DateTime @default(now()) @map("last_active")
+  title      String? // 채팅방 제목 (선택 사항)
+  userId     String?  @map("user_id") // 사용자 ID (나중에 인증 구현 시 활용)
+
+  // 관계 설정
+  messages Chat[] // 채팅방에 속한 메시지들과의 관계
+
+  @@map("conversations")
+}
+
+// 채팅 메시지 (Chat) 모델
+model Chat {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  messageId String   @map("message_id") // 클라이언트에서 생성한 메시지 ID
+  role      String // user, assistant, question 중 하나
+  content   String // 메시지 내용
+  timestamp DateTime // 클라이언트에서 메시지 생성 시각
+
+  // 추가 데이터 필드 (JSON으로 저장)
+  subgraphData      Json?   @map("subgraph_data")
+  tradingActionData Json?   @map("trading_action_data")
+  errorMessage      String? @map("error_message")
+
+  // 피드백 관련 필드
+  humanFeedbackResponse Boolean? @map("human_feedback_response") // true=예, false=아니오, null=피드백 없음
+
+  // 관계 설정
+  conversationId String       @map("conversation_id") // 소속된 채팅방 ID
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@map("chats")
+}
