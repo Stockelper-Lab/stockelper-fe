@@ -25,6 +25,8 @@ model users {
   investor_type    String    @default("안정형")
   created_at       DateTime? @default(now()) @db.Timestamp(6)
   updated_at       DateTime? @default(now()) @db.Timestamp(6)
+
+  conversations    Conversation[]
 }
 
 model survey {
@@ -49,9 +51,10 @@ model Conversation {
   updatedAt  DateTime @updatedAt @map("updated_at")
   lastActive DateTime @default(now()) @map("last_active")
   title      String?  // 채팅방 제목 (선택 사항)
-  userId     String?  @map("user_id") // 사용자 ID (나중에 인증 구현 시 활용)
+  userId     Int?     @map("user_id")
   
   // 관계 설정
+  user       users?   @relation(fields: [userId], references: [id])
   messages   Chat[]   // 채팅방에 속한 메시지들과의 관계
 
   @@map("conversations")

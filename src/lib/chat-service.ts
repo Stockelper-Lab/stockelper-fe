@@ -12,7 +12,7 @@ export interface ConversationInfo {
 }
 
 // 채팅방(Conversation) 생성
-export async function createConversation(userId: string) {
+export async function createConversation(userId: number) {
   const conversation = await prisma.conversation.create({
     data: {
       userId,
@@ -25,7 +25,7 @@ export async function createConversation(userId: string) {
 
 // 채팅방 목록 조회
 export async function getConversations(
-  userId?: string,
+  userId?: number,
   limit = 10
 ): Promise<ConversationInfo[]> {
   const whereClause = userId ? { userId } : {};

@@ -5,9 +5,9 @@ import { NextRequest, NextResponse } from "next/server";
 export async function POST(req: NextRequest) {
   try {
     const { userId } = await req.json();
-    if (!userId) {
+    if (typeof userId !== "number") {
       return NextResponse.json(
-        { error: "userId가 필요합니다." },
+        { error: "유효하지 않은 userId입니다." },
         { status: 400 }
       );
     }
@@ -25,13 +25,22 @@ export async function POST(req: NextRequest) {
 // 대화 목록 조회 API
 export async function GET(req: NextRequest) {
   try {
-    const userId = req.nextUrl.searchParams.get("userId");
-    if (!userId) {
+    const userIdStr = req.nextUrl.searchParams.get("userId");
+    if (!userIdStr) {
       return NextResponse.json(
         { error: "userId가 필요합니다." },
         { status: 400 }
       );
     }
+
+    const userId = parseInt(userIdStr, 10);
+    if (isNaN(userId)) {
+      return NextResponse.json(
+        { error: "유효하지 않은 userId입니다." },
+        { status: 400 }
+      );
+    }
+
     const conversations = await getConversations(userId);
     return NextResponse.json(conversations);
   } catch (error) {
