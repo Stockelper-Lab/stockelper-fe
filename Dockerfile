@@ -9,7 +9,7 @@ RUN npm install -g pnpm
 RUN pnpm install --frozen-lockfile
 
 
-ENV NEXT_PUBLIC_LLM_ENDPOINT=https://stockelper-llm.telepix.kr
+ENV NEXT_PUBLIC_LLM_ENDPOINT=https://stockelper-llm.peo.kr
 
 # 프로젝트 파일 복사
 COPY . .
