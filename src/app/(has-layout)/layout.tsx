@@ -11,7 +11,7 @@ export default function HasLayout({
 }>) {
   return (
     <SidebarProvider>
-      <div className="flex h-screen bg-zinc-50 dark:bg-zinc-900 w-full p-5 gap-5">
+      <div className="flex h-screen box-border bg-zinc-50 dark:bg-zinc-900 w-full p-5 gap-5">
         {/* 사이드바 영역 */}
         <div className="h-full rounded-2xl shadow-sm bg-white dark:bg-zinc-800 overflow-hidden relative flex-shrink-0">
           <AppSidebar />
@@ -19,10 +19,8 @@ export default function HasLayout({
         </div>
 
         {/* 중앙 콘텐츠 영역 (LLM 채팅 등) */}
-        <main className="flex-1 overflow-hidden">
-          <div className="h-full rounded-2xl shadow-sm bg-white dark:bg-zinc-800 overflow-hidden">
-            <div className="h-full overflow-auto">{children}</div>
-          </div>
+        <main className="flex-1 overflow-auto rounded-2xl shadow-sm bg-white dark:bg-zinc-800">
+          {children}
         </main>
       </div>
     </SidebarProvider>

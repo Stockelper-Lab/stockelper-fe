@@ -120,7 +120,7 @@ const SignUpPage = () => {
         transition={{ duration: 0.5 }}
         className="w-full max-w-md"
       >
-        <Card className="relative w-full">
+        <Card className="relative w-full max-h-[90dvh] overflow-auto">
           {/* 뒤로가기 버튼 */}
           <div className="absolute left-4 top-4 z-10">
             {currentStep > 0 ? (

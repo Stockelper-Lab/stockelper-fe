@@ -1,5 +1,9 @@
 import type { Metadata } from "next";
+import { Inter } from "next/font/google";
+import { Toaster } from "sonner";
 import "./globals.css";
+
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Stockelper",
@@ -12,8 +16,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ko">
-      <body className={`antialiased`}>{children}</body>
+    <html lang="ko" className="h-full">
+      <body className={`${inter.className} h-full overflow-hidden`}>
+        {children}
+        <Toaster />
+      </body>
     </html>
   );
 }

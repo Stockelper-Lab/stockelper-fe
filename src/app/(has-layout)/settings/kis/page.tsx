@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useUser } from "@/hooks/use-user";
 import { Eye, EyeOff } from "lucide-react";
 import { useEffect, useState } from "react";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 import PageHeader from "../../components/page-header";
 
 export default function KisSettingsPage() {
@@ -81,7 +81,7 @@ export default function KisSettingsPage() {
   }
 
   return (
-    <div className="p-8 h-full overflow-auto">
+    <div className="p-8 h-full">
       <div className="max-w-2xl mx-auto">
         <PageHeader
           title="KIS 설정"

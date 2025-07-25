@@ -1,4 +1,4 @@
-import { CreditCard, KeyRound, User } from "lucide-react";
+import { KeyRound, User } from "lucide-react";
 import Link from "next/link";
 import PageHeader from "../components/page-header";
 
@@ -15,17 +15,11 @@ const settingsNav = [
     href: "/settings/kis",
     icon: KeyRound,
   },
-  {
-    name: "결제",
-    description: "요금제를 변경하고, 결제 정보를 확인합니다.",
-    href: "/settings/billing",
-    icon: CreditCard,
-  },
 ];
 
 export default function SettingsPage() {
   return (
-    <div className="p-8 h-full overflow-auto">
+    <div className="p-8 h-full">
       <PageHeader
         title="설정"
         description="계정 및 애플리케이션 설정을 관리합니다."

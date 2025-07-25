@@ -1,4 +1,6 @@
-import { useState } from "react";
+"use client";
+
+import { useEffect, useState } from "react";
 
 import {
   DemographicQuestions,
@@ -18,13 +20,17 @@ export type SurveyAnswers = {
   q8: number | null;
 };
 
+interface SurveyStepProps {
+  onSubmit: (values: SurveyAnswers) => void;
+  isLoading: boolean;
+  defaultValues?: SurveyAnswers | null;
+}
+
 export const SurveyStep = ({
   onSubmit,
   isLoading,
-}: {
-  onSubmit: (values: SurveyAnswers) => void;
-  isLoading: boolean;
-}) => {
+  defaultValues,
+}: SurveyStepProps) => {
   // 1~4, 6~8번 단일 선택, 5번 다중 선택
   const [q1, setQ1] = useState<number>(0);
   const [q2, setQ2] = useState<number>(0);
@@ -35,6 +41,19 @@ export const SurveyStep = ({
   const [q7, setQ7] = useState<number>(0);
   const [q8, setQ8] = useState<number>(0);
   const [validationError, setValidationError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (defaultValues) {
+      setQ1(defaultValues.q1 || 0);
+      setQ2(defaultValues.q2 || 0);
+      setQ3(defaultValues.q3 || 0);
+      setQ4(defaultValues.q4 || 0);
+      setQ5(defaultValues.q5 || []);
+      setQ6(defaultValues.q6 || 0);
+      setQ7(defaultValues.q7 || 0);
+      setQ8(defaultValues.q8 || 0);
+    }
+  }, [defaultValues]);
 
   const handleQ5Change = (value: number) => {
     setQ5((prev) =>
