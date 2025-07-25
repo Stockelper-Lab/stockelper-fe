@@ -1,10 +1,7 @@
-FROM node:20-alpine
+FROM node:24-alpine
 
 # 작업 디렉토리 설정
 WORKDIR /app
-
-# 빌드에 필요한 패키지 설치
-RUN apk add --no-cache libc6-compat
 
 # 패키지 매니저 파일 복사 및 종속성 설치
 COPY package.json pnpm-lock.yaml* ./
@@ -18,7 +15,7 @@ ENV NEXT_PUBLIC_LLM_ENDPOINT=https://endpoint-for-your-llm-service
 COPY . .
 
 # Next.js 애플리케이션 빌드
-RUN npm run build
+RUN pnpm run build
 
 # 포트 노출
 EXPOSE 3000
