@@ -107,9 +107,10 @@ export function useChatBot(options?: ChatBotOptions) {
 
   // 대화 목록 가져오기
   const loadConversations = useCallback(async () => {
+    if (!user) return;
     try {
       setIsLoading(true);
-      const response = await fetch("/api/conversations");
+      const response = await fetch(`/api/conversations?userId=${user.id}`);
 
       if (!response.ok) {
         throw new Error(`대화 목록 로드 실패: ${response.status}`);
@@ -122,7 +123,7 @@ export function useChatBot(options?: ChatBotOptions) {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [user]);
 
   // 대화 내용 로드 함수 - 페이지네이션 적용
   const loadMessages = useCallback(
@@ -462,11 +463,19 @@ export function useChatBot(options?: ChatBotOptions) {
 
   // 새 대화 시작하기
   const startNewConversation = useCallback(async () => {
+    if (!user) {
+      console.error("새 대화를 시작하려면 로그인이 필요합니다.");
+      return null;
+    }
     try {
       setIsLoading(true);
       // 새 대화 생성 (API 호출로 변경)
       const response = await fetch("/api/conversations", {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ userId: user.id }),
       });
 
       if (!response.ok) {
@@ -497,7 +506,7 @@ export function useChatBot(options?: ChatBotOptions) {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [user]);
 
   // 특정 대화 선택하기 (이제는 직접 이동만 처리)
   const selectConversation = useCallback((conversationId: string) => {

@@ -12,7 +12,7 @@ export interface ConversationInfo {
 }
 
 // 채팅방(Conversation) 생성
-export async function createConversation(userId?: string) {
+export async function createConversation(userId: string) {
   const conversation = await prisma.conversation.create({
     data: {
       userId,
