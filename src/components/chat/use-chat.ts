@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import {
   sendFeedback as apiSendFeedback,
   sendMessage as apiSendMessage,
+  isValidTradingAction,
 } from "./chat-api";
 import { Message, Subgraph, TradingAction } from "./types";
 
@@ -454,42 +455,6 @@ export function useChatBot(options?: ChatBotOptions) {
     },
     [] // messages는 디펜던시로 필요하지 않음
   );
-
-  // trading_action의 유효성 검증 함수
-  const isValidTradingAction = (action: TradingAction): boolean => {
-    // 필수 필드 검증
-    if (!action.stock_code || !action.order_side) {
-      return false;
-    }
-
-    // 주문 타입 검증 (buy 또는 sell만 허용)
-    if (action.order_side !== "buy" && action.order_side !== "sell") {
-      return false;
-    }
-
-    // 주문 수량 및 가격 검증 (숫자여야 함)
-    if (action.order_quantity !== undefined) {
-      const quantity = Number(action.order_quantity);
-      if (isNaN(quantity) || quantity <= 0) {
-        return false;
-      }
-    }
-
-    if (action.order_price !== undefined) {
-      const price = Number(action.order_price);
-      if (isNaN(price) || price <= 0) {
-        return false;
-      }
-    }
-
-    // 종목 코드 형식 검증 (숫자로만 구성)
-    const stockCodeRegex = /^\d+$/;
-    if (!stockCodeRegex.test(action.stock_code)) {
-      return false;
-    }
-
-    return true;
-  };
 
   // 새 대화 시작하기
   const startNewConversation = useCallback(async () => {
