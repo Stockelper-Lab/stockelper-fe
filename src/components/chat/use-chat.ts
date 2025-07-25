@@ -219,6 +219,8 @@ export function useChatBot(options?: ChatBotOptions) {
   // 초기 채팅 기록 로드
   useEffect(() => {
     const fetchInitialChat = async () => {
+      if (!user) return; // user가 없으면 실행하지 않음
+
       try {
         setIsLoading(true);
 
@@ -231,7 +233,9 @@ export function useChatBot(options?: ChatBotOptions) {
           await loadMessages(initialConversationId);
 
           // 대화 제목 가져오기
-          const conversationResponse = await fetch(`/api/conversations`);
+          const conversationResponse = await fetch(
+            `/api/conversations?userId=${user.id}`
+          );
           if (conversationResponse.ok) {
             const allConversations = await conversationResponse.json();
             const currentConversation = allConversations.find(
@@ -253,7 +257,9 @@ export function useChatBot(options?: ChatBotOptions) {
               await loadMessages(storedId);
 
               // 대화 제목 가져오기
-              const conversationResponse = await fetch(`/api/conversations`);
+              const conversationResponse = await fetch(
+                `/api/conversations?userId=${user.id}`
+              );
               if (conversationResponse.ok) {
                 const allConversations = await conversationResponse.json();
                 const currentConversation = allConversations.find(
@@ -273,9 +279,11 @@ export function useChatBot(options?: ChatBotOptions) {
       }
     };
 
-    fetchInitialChat();
-    loadConversations();
-  }, [initialConversationId, initialShowChatList, loadMessages]);
+    if (user) {
+      fetchInitialChat();
+      loadConversations();
+    }
+  }, [initialConversationId, initialShowChatList, loadMessages, user]);
 
   // 피드백 처리 함수
   const handleFeedback = useCallback(
