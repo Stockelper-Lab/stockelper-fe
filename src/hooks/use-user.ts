@@ -2,11 +2,17 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 interface User {
-  id: string;
+  id: number;
   email: string;
-  name: string | null;
-  createdAt: string;
-  updatedAt: string;
+  name: string;
+  nickname: string;
+  kis_app_key: string;
+  kis_app_secret: string;
+  kis_access_token: string | null;
+  account_no: string;
+  investor_type: string;
+  created_at: string | null;
+  updated_at: string | null;
 }
 
 export function useUser() {
