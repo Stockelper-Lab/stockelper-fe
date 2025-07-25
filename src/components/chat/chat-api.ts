@@ -220,6 +220,7 @@ async function processStream(
 
 async function handleApiCall(
   conversationId: string,
+  userId: number,
   requestBody: Record<string, unknown>,
   onChunkReceived?: (chunkText: string) => void,
   onResponseComplete?: (message: Message) => void
@@ -231,7 +232,7 @@ async function handleApiCall(
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(requestBody),
+      body: JSON.stringify({ ...requestBody, user_id: userId }),
     });
 
     if (!response.ok) {
@@ -264,6 +265,7 @@ async function handleApiCall(
 // HTTP 스트리밍을 통한 메시지 전송 및 응답 처리
 export async function sendMessage(
   message: string,
+  userId: number,
   onChunkReceived?: (chunkText: string) => void,
   onResponseComplete?: (message: Message) => void
 ): Promise<Message> {
@@ -279,8 +281,8 @@ export async function sendMessage(
 
   return handleApiCall(
     conversationId,
+    userId,
     {
-      user_id: 1, // Note: This is hardcoded
       thread_id: conversationId,
       message: message,
       human_feedback: null,
@@ -294,6 +296,7 @@ export async function sendMessage(
 export async function sendFeedback(
   originalMessage: string,
   humanFeedback: boolean,
+  userId: number,
   onChunkReceived?: (chunkText: string) => void,
   onResponseComplete?: (message: Message) => void
 ): Promise<Message> {
@@ -312,8 +315,8 @@ export async function sendFeedback(
 
   return handleApiCall(
     conversationId,
+    userId,
     {
-      user_id: 1, // Note: This is hardcoded
       thread_id: conversationId,
       message: originalMessage,
       human_feedback: humanFeedback,

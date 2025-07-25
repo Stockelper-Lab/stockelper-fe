@@ -1,3 +1,4 @@
+import { useUser } from "@/hooks/use-user";
 import { ConversationInfo } from "@/lib/chat-service";
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -81,6 +82,7 @@ export function useChatBot(options?: ChatBotOptions) {
     initialShowChatList !== undefined ? initialShowChatList : true
   );
   const [currentChatTitle, setCurrentChatTitle] = useState<string>("새 대화");
+  const { user } = useUser();
 
   // 페이지네이션 관련 상태
   const [hasMore, setHasMore] = useState(false);
@@ -332,6 +334,7 @@ export function useChatBot(options?: ChatBotOptions) {
         await apiSendFeedback(
           lastQuestionSentToAPI, // API에는 원래 질문의 컨텐츠를 보내야 할 수 있음
           feedback,
+          user!.id,
           (chunkText: string) => {
             setStreamingMessage((prev) => {
               if (!prev) return null;
@@ -367,7 +370,7 @@ export function useChatBot(options?: ChatBotOptions) {
         setIsLoading(false);
       }
     },
-    [lastQuestionSentToAPI, getConversationId]
+    [lastQuestionSentToAPI, getConversationId, user]
   );
 
   // 메시지 전송 처리
@@ -397,6 +400,7 @@ export function useChatBot(options?: ChatBotOptions) {
       try {
         await apiSendMessage(
           content,
+          user!.id,
           (chunkText: string) => {
             setStreamingMessage((prev) => {
               if (!prev) return null;
@@ -453,7 +457,7 @@ export function useChatBot(options?: ChatBotOptions) {
         setIsLoading(false);
       }
     },
-    [] // messages는 디펜던시로 필요하지 않음
+    [user] // messages는 디펜던시로 필요하지 않음
   );
 
   // 새 대화 시작하기
