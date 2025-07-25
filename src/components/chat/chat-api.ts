@@ -28,7 +28,7 @@ class WebSocketManager {
     // HTTP 프로토콜에 따라 WebSocket 프로토콜 결정 (http -> ws, https -> wss)
     const wsProtocol = API_ENDPOINT.startsWith("https") ? "wss" : "ws";
     const apiUrl = API_ENDPOINT.replace(/^https?:\/\//, "");
-    this.connectUrl = `${wsProtocol}://${apiUrl}/ws/stock/chat`;
+    this.connectUrl = `${wsProtocol}://${apiUrl}/stock/chat`;
   }
 
   public static getInstance(): WebSocketManager {
