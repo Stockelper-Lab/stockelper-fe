@@ -9,11 +9,11 @@ services:
       - "21011:3000"
     environment:
       - NODE_ENV=production
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/postgres
+      - DATABASE_URL=postgresql://postgres:postgres@10.0.10.74:5432/llm_users
       - JWT_SECRET=hello_stockelper
       - JWT_EXPIRES_IN=7d
       - COOKIE_NAME=auth-token
-      - NEXT_PUBLIC_LLM_ENDPOINT=https://endpoint-for-your-llm-service
+      - NEXT_PUBLIC_LLM_ENDPOINT=https://stockelper-llm.telepix.kr
     restart: unless-stopped
     networks:
       - stockelper

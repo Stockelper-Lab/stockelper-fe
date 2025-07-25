@@ -10,6 +10,7 @@ Docker 및 npm을 이용해 손쉽게 개발 및 배포할 수 있습니다.
 - **Styling**: Tailwind CSS
 - **Authentication**: JWT, bcryptjs
 - **UI Components**: Radix UI, Lucide React
+- **Notifications**: Sonner (Toast notifications)
 - **Deployment**: Docker, Docker Compose
 
 ## 🚀 빠른 시작
@@ -148,9 +149,20 @@ npm run prisma:studio
 ```
 src/
 ├── app/                 # Next.js App Router
-│   ├── api/            # API 라우트
-│   ├── auth/           # 인증 페이지
-│   └── ...
+│   ├── (has-layout)/   # 레이아웃이 있는 페이지
+│   │   ├── settings/   # 설정 페이지들
+│   │   │   ├── account/    # 계정 설정 (닉네임, 비밀번호)
+│   │   │   ├── kis/        # KIS 증권 API 설정
+│   │   │   └── survey/     # 설문조사 재설정
+│   │   ├── chat/       # 채팅 페이지
+│   │   └── dashboard/  # 대시보드
+│   ├── (no-layout)/    # 레이아웃이 없는 페이지
+│   │   ├── sign-in/    # 로그인
+│   │   └── sign-up/    # 회원가입
+│   └── api/            # API 라우트
+│       ├── auth/       # 인증 API
+│       ├── settings/   # 설정 관련 API
+│       └── survey/     # 설문조사 API
 ├── components/         # React 컴포넌트
 │   ├── chat/          # 채팅 관련 컴포넌트
 │   ├── ui/            # 공통 UI 컴포넌트
@@ -260,6 +272,23 @@ npm run lint
 # 빌드 테스트
 npm run build
 ```
+
+## 🆕 최근 업데이트 (v0.1.0)
+
+### 새로운 기능
+
+- **계정 설정 페이지**: 사용자 닉네임 및 비밀번호 변경 기능
+- **KIS 증권 API 설정**: KIS 앱키, 앱시크릿, 계좌번호 관리
+- **설문조사 재설정**: 기존 설문조사 답변 수정 기능
+- **Sonner 알림 시스템**: react-hot-toast에서 sonner로 교체하여 더 나은 사용자 경험 제공
+- **데이터베이스 제약 조건 강화**: 사용자별 고유 제약 조건 추가로 데이터 무결성 향상
+
+### 개선사항
+
+- 설정 페이지 UI/UX 개선
+- API 라우트 구조 최적화
+- 사용자 인증 및 권한 관리 강화
+- 폼 유효성 검사 및 오류 처리 개선
 
 ## 📞 문의 및 지원
 
