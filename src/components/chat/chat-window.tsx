@@ -2,10 +2,12 @@
 
 import { StockChart } from "@/components/chat/stock-chart";
 import { Button } from "@/components/ui/button";
+import { useUser } from "@/hooks/use-user";
 import { ConversationInfo } from "@/lib/chat-service";
 import { formatDistanceToNow } from "date-fns";
 import { ko } from "date-fns/locale";
 import { ArrowLeft, Edit2, Plus, Trash2 } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 import { ChatInput } from "./chat-input";
 import { ChatMessageList } from "./chat-message-list";
@@ -116,7 +118,7 @@ const ConversationList = ({
                 ) : (
                   // 일반 표시 모드
                   <div className="flex w-full items-center">
-                    <a
+                    <Link
                       href={`/chat/${conversation.id}`}
                       className="flex-grow text-left p-3 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors block"
                     >
@@ -132,7 +134,7 @@ const ConversationList = ({
                           }
                         )}
                       </div>
-                    </a>
+                    </Link>
                     <div className="flex opacity-0 group-hover:opacity-100 transition-opacity pr-2">
                       <Button
                         variant="ghost"
@@ -196,13 +198,16 @@ export default function ChatWindow({
     renameConversation,
     deleteConversation,
   } = useChatBot({ conversationId, showChatList: initialShowChatList });
+  const { user } = useUser();
 
   // 주식 정보나 메시지가 있는지 확인
   const hasStockInfo = messages.length > 0;
 
   // 새 대화 시작 핸들러
   const handleNewChat = () => {
-    startNewConversation();
+    if (user?.id) {
+      startNewConversation(user.id);
+    }
   };
 
   // 대화방 이름 변경 핸들러
@@ -235,12 +240,12 @@ export default function ChatWindow({
           <div className="h-full lg:col-span-2 flex flex-col bg-zinc-50 dark:bg-zinc-900 rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-800">
             {/* 채팅 헤더 */}
             <div className="flex items-center p-4 border-b border-zinc-200 dark:border-zinc-800">
-              <a
+              <Link
                 href="/chat"
                 className="p-1 mr-2 rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
               >
                 <ArrowLeft size={20} />
-              </a>
+              </Link>
               <h1
                 className="text-lg font-semibold truncate flex-grow cursor-pointer hover:text-indigo-600 transition-colors"
                 onClick={() => {

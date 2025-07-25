@@ -462,11 +462,7 @@ export function useChatBot(options?: ChatBotOptions) {
   );
 
   // 새 대화 시작하기
-  const startNewConversation = useCallback(async () => {
-    if (!user) {
-      console.error("새 대화를 시작하려면 로그인이 필요합니다.");
-      return null;
-    }
+  const startNewConversation = useCallback(async (userId: number) => {
     try {
       setIsLoading(true);
       // 새 대화 생성 (API 호출로 변경)
@@ -475,7 +471,7 @@ export function useChatBot(options?: ChatBotOptions) {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ userId: user.id }),
+        body: JSON.stringify({ userId }),
       });
 
       if (!response.ok) {
@@ -506,7 +502,7 @@ export function useChatBot(options?: ChatBotOptions) {
     } finally {
       setIsLoading(false);
     }
-  }, [user]);
+  }, []);
 
   // 특정 대화 선택하기 (이제는 직접 이동만 처리)
   const selectConversation = useCallback((conversationId: string) => {
