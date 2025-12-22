@@ -8,9 +8,9 @@
     "start": "PORT=80 next start",
     "lint": "next lint",
     "prisma:generate": "prisma generate",
-    "prisma:migrate": "DATABASE_URL=postgresql://postgres:postgres@10.0.10.74:5432/llm_users prisma migrate dev",
-    "prisma:migrate-reset": "DATABASE_URL=postgresql://postgres:postgres@10.0.10.74:5432/llm_users prisma migrate reset",
-    "prisma:pull": "DATABASE_URL=postgresql://postgres:postgres@10.0.10.74:5432/llm_users prisma db pull",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:migrate-reset": "prisma migrate reset",
+    "prisma:pull": "prisma db pull",
     "prisma:studio": "prisma studio",
     "typecheck": "tsc --noEmit"
   },
