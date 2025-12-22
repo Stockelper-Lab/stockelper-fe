@@ -34,8 +34,12 @@
    ```
 
 5. **포트 설정 확인**
-   - 애플리케이션이 사용할 포트(기본 3000)가 열려있는지 확인
-   - EC2 보안 그룹에서 해당 포트 허용
+   - 애플리케이션이 사용할 포트(80)가 열려있는지 확인
+   - EC2 보안 그룹에서 포트 80 (HTTP) 허용
+   - 80 포트는 privileged port이므로 Node.js에 권한 부여 필요:
+     ```bash
+     sudo setcap 'cap_net_bind_service=+ep' $(which node)
+     ```
 
 ### 2. SSH 키 생성 및 설정
 

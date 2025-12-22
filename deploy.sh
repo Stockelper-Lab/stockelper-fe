@@ -51,18 +51,29 @@ pnpm build
 
 # PM2로 애플리케이션 실행 또는 재시작
 APP_NAME="stockelper-fe"
-PM2_SCRIPT="pnpm start"
 
 echo "🚀 PM2로 애플리케이션을 시작합니다..."
+
+# 80 포트는 privileged port이므로 권한이 필요합니다
+# Node.js에 80 포트 바인딩 권한 부여 (한 번만 실행)
+if ! getcap $(which node) 2>/dev/null | grep -q "cap_net_bind_service"; then
+    echo "🔐 Node.js에 80 포트 바인딩 권한을 부여합니다..."
+    sudo setcap 'cap_net_bind_service=+ep' $(which node) || {
+        echo "⚠️  권한 설정 실패. sudo 권한이 필요할 수 있습니다."
+        echo "⚠️  또는 다음 명령어를 수동으로 실행하세요:"
+        echo "   sudo setcap 'cap_net_bind_service=+ep' \$(which node)"
+    }
+fi
 
 # PM2 프로세스가 실행 중인지 확인
 if pm2 list | grep -q "$APP_NAME"; then
     echo "🔄 기존 프로세스를 재시작합니다..."
-    pm2 restart $APP_NAME
-else
-    echo "✨ 새 프로세스를 시작합니다..."
-    pm2 start "$PM2_SCRIPT" --name $APP_NAME
+    pm2 delete $APP_NAME 2>/dev/null || true
 fi
+
+echo "✨ 새 프로세스를 시작합니다..."
+# PORT 환경 변수를 설정하여 80 포트로 실행
+pm2 start "pnpm start" --name $APP_NAME --update-env
 
 # PM2 시작 시 자동 실행 설정
 # pm2 startup은 sudo 권한이 필요하고 이미 설정되어 있을 수 있으므로 실패해도 계속 진행
