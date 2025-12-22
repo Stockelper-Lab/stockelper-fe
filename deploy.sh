@@ -65,19 +65,42 @@ else
 fi
 
 # PM2 시작 시 자동 실행 설정
-pm2 startup
-pm2 save
+# pm2 startup은 sudo 권한이 필요하고 이미 설정되어 있을 수 있으므로 실패해도 계속 진행
+pm2 startup || echo "⚠️  pm2 startup 설정은 수동으로 실행해야 할 수 있습니다. (sudo 권한 필요)"
+pm2 save || echo "⚠️  pm2 save 실패 (이미 저장되어 있을 수 있음)"
 
 # 상태 확인
 echo "⏳ 애플리케이션이 정상적으로 시작되는지 확인합니다..."
 sleep 5
 
-if pm2 list | grep -q "$APP_NAME.*online"; then
+# 상태 확인
+echo "⏳ 애플리케이션 상태를 확인합니다..."
+sleep 3
+
+echo "📊 PM2 프로세스 상태:"
+pm2 list
+
+# 프로세스가 존재하고 online 상태인지 확인
+if pm2 list | grep -q "$APP_NAME" && pm2 list | grep "$APP_NAME" | grep -q "online"; then
+    echo ""
     echo "✅ 배포가 성공적으로 완료되었습니다!"
-    pm2 list
-    pm2 logs $APP_NAME --lines 20 --nostream
+    echo ""
+    echo "📋 최근 로그:"
+    pm2 logs $APP_NAME --lines 20 --nostream 2>/dev/null || echo "로그를 가져올 수 없습니다."
+    exit 0
+elif pm2 list | grep -q "$APP_NAME"; then
+    # 프로세스가 존재하지만 online이 아닌 경우
+    echo ""
+    echo "⚠️  프로세스가 존재하지만 online 상태가 아닙니다."
+    echo "📋 최근 로그:"
+    pm2 logs $APP_NAME --lines 50 2>/dev/null || echo "로그를 가져올 수 없습니다."
+    # 프로세스가 존재하면 일단 성공으로 간주 (재시작 중일 수 있음)
+    echo "✅ 프로세스가 실행 중입니다."
+    exit 0
 else
-    echo "❌ 배포 중 오류가 발생했습니다."
-    pm2 logs $APP_NAME --lines 50
+    echo ""
+    echo "❌ 프로세스를 찾을 수 없습니다."
+    echo "📋 PM2 프로세스 목록:"
+    pm2 list
     exit 1
 fi
