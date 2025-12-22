@@ -45,8 +45,11 @@ JWT_EXPIRES_IN=7d
 # 쿠키 설정
 COOKIE_NAME=auth-token
 
-# LLM 서비스 엔드포인트
-NEXT_PUBLIC_LLM_ENDPOINT=https://your-llm-service-endpoint
+# LLM 서비스 엔드포인트 (서버 사이드 전용)
+# LLM_ENDPOINT를 우선 사용하며, 하위 호환성을 위해 NEXT_PUBLIC_LLM_ENDPOINT도 지원합니다.
+LLM_ENDPOINT=https://your-llm-service-endpoint
+# 또는
+# NEXT_PUBLIC_LLM_ENDPOINT=https://your-llm-service-endpoint
 
 # 환경 설정
 NODE_ENV=development

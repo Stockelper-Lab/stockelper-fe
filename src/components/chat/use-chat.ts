@@ -1,5 +1,13 @@
 import { useUser } from "@/hooks/use-user";
 import { ConversationInfo } from "@/lib/chat-service";
+import {
+  fetchConversations,
+  fetchConversationMessages,
+  createConversation,
+  updateConversationTitle,
+  deleteConversation,
+} from "@/lib/api/conversations";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
 import {
   sendFeedback as apiSendFeedback,
@@ -83,6 +91,7 @@ export function useChatBot(options?: ChatBotOptions) {
   );
   const [currentChatTitle, setCurrentChatTitle] = useState<string>("새 대화");
   const { user } = useUser();
+  const queryClient = useQueryClient();
 
   // 페이지네이션 관련 상태
   const [hasMore, setHasMore] = useState(false);
@@ -105,25 +114,30 @@ export function useChatBot(options?: ChatBotOptions) {
     return currentConversationId;
   }, [currentConversationId]);
 
-  // 대화 목록 가져오기
-  const loadConversations = useCallback(async () => {
-    if (!user) return;
-    try {
-      setIsLoading(true);
-      const response = await fetch(`/api/conversations?userId=${user.id}`);
+  // 대화 목록 가져오기 - React Query 사용
+  const {
+    data: conversationsData,
+    isLoading: conversationsLoading,
+    refetch: refetchConversations,
+  } = useQuery({
+    queryKey: ["conversations", user?.id],
+    queryFn: () => fetchConversations(user!.id),
+    enabled: !!user,
+    staleTime: 1000 * 60 * 2, // 2분간 fresh 상태 유지
+    gcTime: 1000 * 60 * 10, // 10분간 캐시 유지
+  });
 
-      if (!response.ok) {
-        throw new Error(`대화 목록 로드 실패: ${response.status}`);
-      }
-
-      const result = await response.json();
-      setConversations(result);
-    } catch (error) {
-      console.error("대화 목록 로드 중 오류 발생:", error);
-    } finally {
-      setIsLoading(false);
+  // conversations 상태를 React Query 데이터로 동기화
+  useEffect(() => {
+    if (conversationsData) {
+      setConversations(conversationsData);
     }
-  }, [user]);
+  }, [conversationsData]);
+
+  // 대화 목록 로드 함수 (기존 API 유지)
+  const loadConversations = useCallback(async () => {
+    await refetchConversations();
+  }, [refetchConversations]);
 
   // 대화 내용 로드 함수 - 페이지네이션 적용
   const loadMessages = useCallback(
@@ -281,7 +295,7 @@ export function useChatBot(options?: ChatBotOptions) {
 
     if (user) {
       fetchInitialChat();
-      loadConversations();
+      // loadConversations는 React Query가 자동으로 처리
     }
   }, [initialConversationId, initialShowChatList, loadMessages, user]);
 
@@ -469,24 +483,12 @@ export function useChatBot(options?: ChatBotOptions) {
     [user] // messages는 디펜던시로 필요하지 않음
   );
 
-  // 새 대화 시작하기
-  const startNewConversation = useCallback(async (userId: number) => {
-    try {
-      setIsLoading(true);
-      // 새 대화 생성 (API 호출로 변경)
-      const response = await fetch("/api/conversations", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ userId }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`대화 생성 실패: ${response.status}`);
-      }
-
-      const newConversation = await response.json();
+  // 새 대화 생성 mutation
+  const createConversationMutation = useMutation({
+    mutationFn: (userId: number) => createConversation(userId),
+    onSuccess: (newConversation) => {
+      // 대화 목록 캐시 무효화 및 리프레시
+      queryClient.invalidateQueries({ queryKey: ["conversations", user?.id] });
 
       // 상태 업데이트
       setCurrentConversationId(newConversation.id);
@@ -502,15 +504,25 @@ export function useChatBot(options?: ChatBotOptions) {
 
       // 페이지 이동
       window.location.href = `/chat/${newConversation.id}`;
+    },
+  });
 
-      return newConversation.id;
-    } catch (error) {
-      console.error("새 대화 생성 중 오류 발생:", error);
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  // 새 대화 시작하기
+  const startNewConversation = useCallback(
+    async (userId: number) => {
+      try {
+        setIsLoading(true);
+        await createConversationMutation.mutateAsync(userId);
+        return createConversationMutation.data?.id ?? null;
+      } catch (error) {
+        console.error("새 대화 생성 중 오류 발생:", error);
+        return null;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [createConversationMutation]
+  );
 
   // 특정 대화 선택하기 (이제는 직접 이동만 처리)
   const selectConversation = useCallback((conversationId: string) => {
@@ -524,33 +536,36 @@ export function useChatBot(options?: ChatBotOptions) {
     window.location.href = "/chat";
   }, []);
 
+  // 대화방 이름 변경 mutation
+  const updateConversationTitleMutation = useMutation({
+    mutationFn: ({
+      conversationId,
+      title,
+    }: {
+      conversationId: string;
+      title: string;
+    }) => updateConversationTitle(conversationId, title),
+    onSuccess: (updatedConversation, variables) => {
+      // 대화 목록 캐시 무효화 및 리프레시
+      queryClient.invalidateQueries({ queryKey: ["conversations", user?.id] });
+
+      // 현재 대화방인 경우 제목도 업데이트
+      if (variables.conversationId === currentConversationId) {
+        setCurrentChatTitle(updatedConversation.title);
+      }
+    },
+  });
+
   // 대화방 이름 변경
   const renameConversation = useCallback(
     async (conversationId: string, newTitle: string) => {
       try {
         setIsLoading(true);
-        const response = await fetch(`/api/conversations/${conversationId}`, {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ title: newTitle }),
-        });
-
-        if (!response.ok) {
-          throw new Error(`대화방 이름 변경 실패: ${response.status}`);
-        }
-
-        const updatedConversation = await response.json();
-
-        // 대화 목록 새로고침
-        await loadConversations();
-
-        // 현재 대화방인 경우 제목도 업데이트
-        if (conversationId === currentConversationId) {
-          setCurrentChatTitle(updatedConversation.title);
-        }
-
+        const updatedConversation =
+          await updateConversationTitleMutation.mutateAsync({
+            conversationId,
+            title: newTitle,
+          });
         return updatedConversation;
       } catch (error) {
         console.error("대화방 이름 변경 중 오류 발생:", error);
@@ -559,30 +574,29 @@ export function useChatBot(options?: ChatBotOptions) {
         setIsLoading(false);
       }
     },
-    [currentConversationId, loadConversations]
+    [currentConversationId, updateConversationTitleMutation]
   );
 
+  // 대화방 삭제 mutation
+  const deleteConversationMutation = useMutation({
+    mutationFn: (conversationId: string) => deleteConversation(conversationId),
+    onSuccess: (_, conversationId) => {
+      // 대화 목록 캐시 무효화 및 리프레시
+      queryClient.invalidateQueries({ queryKey: ["conversations", user?.id] });
+
+      // 삭제된 대화방이 현재 보고 있는 대화방인 경우 목록으로 돌아가기
+      if (conversationId === currentConversationId) {
+        backToConversationList();
+      }
+    },
+  });
+
   // 대화방 삭제
-  const deleteConversation = useCallback(
+  const deleteConversationHandler = useCallback(
     async (conversationId: string) => {
       try {
         setIsLoading(true);
-        const response = await fetch(`/api/conversations/${conversationId}`, {
-          method: "DELETE",
-        });
-
-        if (!response.ok) {
-          throw new Error(`대화방 삭제 실패: ${response.status}`);
-        }
-
-        // 대화 목록 새로고침
-        await loadConversations();
-
-        // 삭제된 대화방이 현재 보고 있는 대화방인 경우 목록으로 돌아가기
-        if (conversationId === currentConversationId) {
-          backToConversationList();
-        }
-
+        await deleteConversationMutation.mutateAsync(conversationId);
         return true;
       } catch (error) {
         console.error("대화방 삭제 중 오류 발생:", error);
@@ -591,7 +605,7 @@ export function useChatBot(options?: ChatBotOptions) {
         setIsLoading(false);
       }
     },
-    [currentConversationId, loadConversations, backToConversationList]
+    [deleteConversationMutation]
   );
 
   return {
@@ -599,7 +613,7 @@ export function useChatBot(options?: ChatBotOptions) {
     streamingMessage,
     sendMessage,
     handleFeedback,
-    isLoading,
+    isLoading: isLoading || conversationsLoading,
     graphData,
     subgraphData,
     stockInfo,
@@ -611,7 +625,7 @@ export function useChatBot(options?: ChatBotOptions) {
     selectConversation,
     backToConversationList,
     renameConversation,
-    deleteConversation,
+    deleteConversation: deleteConversationHandler,
     // 무한 스크롤 관련 속성 추가
     hasMore,
     isLoadingMore,

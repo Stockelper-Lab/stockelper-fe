@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useUser } from "@/hooks/use-user";
+import { updateKisSettings } from "@/lib/api/settings";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Eye, EyeOff } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -12,8 +14,8 @@ import PageHeader from "../../components/page-header";
 
 export default function KisSettingsPage() {
   const { user, loading, error, refetch } = useUser();
+  const queryClient = useQueryClient();
   const [showAppSecret, setShowAppSecret] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [kisAppKey, setKisAppKey] = useState("");
   const [kisAppSecret, setKisAppSecret] = useState("");
@@ -27,35 +29,27 @@ export default function KisSettingsPage() {
     }
   }, [user]);
 
+  // KIS 설정 업데이트 mutation
+  const updateKisMutation = useMutation({
+    mutationFn: updateKisSettings,
+    onSuccess: () => {
+      toast.success("KIS 정보가 성공적으로 업데이트되었습니다.");
+      // 사용자 정보 캐시 무효화 및 리프레시
+      queryClient.invalidateQueries({ queryKey: ["user"] });
+      refetch();
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || "알 수 없는 오류가 발생했습니다.");
+    },
+  });
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
-
-    try {
-      const response = await fetch("/api/settings/kis", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          kis_app_key: kisAppKey,
-          kis_app_secret: kisAppSecret,
-          account_no: accountNo,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "KIS 정보 업데이트에 실패했습니다.");
-      }
-
-      toast.success("KIS 정보가 성공적으로 업데이트되었습니다.");
-      refetch();
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "알 수 없는 오류가 발생했습니다."
-      );
-    } finally {
-      setIsSubmitting(false);
-    }
+    updateKisMutation.mutate({
+      kis_app_key: kisAppKey,
+      kis_app_secret: kisAppSecret,
+      account_no: accountNo,
+    });
   };
 
   if (loading) {
@@ -136,8 +130,8 @@ export default function KisSettingsPage() {
           </div>
 
           <div className="flex justify-end">
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "저장 중..." : "저장"}
+            <Button type="submit" disabled={updateKisMutation.isPending}>
+              {updateKisMutation.isPending ? "저장 중..." : "저장"}
             </Button>
           </div>
         </form>

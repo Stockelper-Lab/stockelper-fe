@@ -45,6 +45,10 @@ pnpm install --frozen-lockfile
 echo "🔧 Prisma 클라이언트를 생성합니다..."
 pnpm prisma:generate || pnpm exec prisma generate
 
+# Prisma 마이그레이션 적용 (프로덕션)
+echo "🔧 Prisma 마이그레이션을 적용합니다..."
+pnpm prisma:migrate-deploy || pnpm exec prisma migrate deploy
+
 # 프로젝트 빌드
 echo "🔨 프로젝트를 빌드합니다..."
 pnpm build

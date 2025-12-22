@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { Toaster } from "sonner";
+import { ReactQueryProvider } from "@/lib/react-query-provider";
+import { GlobalLoadingIndicator } from "@/components/common/global-loading-indicator";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -18,8 +20,11 @@ export default function RootLayout({
   return (
     <html lang="ko" className="h-full">
       <body className={`${inter.className} h-full overflow-hidden`}>
-        {children}
-        <Toaster />
+        <ReactQueryProvider>
+          <GlobalLoadingIndicator />
+          {children}
+          <Toaster />
+        </ReactQueryProvider>
       </body>
     </html>
   );

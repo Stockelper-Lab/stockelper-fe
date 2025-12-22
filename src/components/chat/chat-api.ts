@@ -1,4 +1,3 @@
-import process from "process";
 import { v4 as uuidv4 } from "uuid";
 import { Message, Subgraph, TradingAction } from "./types";
 
@@ -226,8 +225,8 @@ async function handleApiCall(
   onResponseComplete?: (message: Message) => void
 ): Promise<Message> {
   try {
-    const API_ENDPOINT = process.env.NEXT_PUBLIC_LLM_ENDPOINT as string;
-    const response = await fetch(`${API_ENDPOINT}/stock/chat`, {
+    // Next 서버 API를 통해 LLM과 통신
+    const response = await fetch("/api/chat", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

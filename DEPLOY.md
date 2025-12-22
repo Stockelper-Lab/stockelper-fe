@@ -101,7 +101,11 @@ DATABASE_URL=postgresql://postgres:postgres@10.0.10.74:5432/llm_users
 JWT_SECRET=your-secret-key
 JWT_EXPIRES_IN=7d
 COOKIE_NAME=auth-token
-NEXT_PUBLIC_LLM_ENDPOINT=https://stockelper-llm.peo.kr
+# LLM 서비스 엔드포인트 (서버 사이드 전용)
+# LLM_ENDPOINT를 우선 사용하며, 하위 호환성을 위해 NEXT_PUBLIC_LLM_ENDPOINT도 지원합니다.
+LLM_ENDPOINT=https://stockelper-llm.peo.kr
+# 또는
+# NEXT_PUBLIC_LLM_ENDPOINT=https://stockelper-llm.peo.kr
 ```
 
 ## 배포 프로세스

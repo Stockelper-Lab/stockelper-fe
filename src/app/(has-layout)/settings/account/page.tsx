@@ -13,6 +13,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useUser } from "@/hooks/use-user";
+import {
+  updateAccountNickname,
+  updateAccountPassword,
+} from "@/lib/api/settings";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -20,15 +25,13 @@ import PageHeader from "../../components/page-header";
 
 export default function AccountSettingsPage() {
   const { user, loading, refetch } = useUser();
+  const queryClient = useQueryClient();
   const [nickname, setNickname] = useState("");
-  const [isNicknameSubmitting, setIsNicknameSubmitting] = useState(false);
-
   const [passwordData, setPasswordData] = useState({
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
   });
-  const [isPasswordSubmitting, setIsPasswordSubmitting] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -36,66 +39,48 @@ export default function AccountSettingsPage() {
     }
   }, [user]);
 
-  const handleNicknameChange = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!nickname || nickname === user?.nickname) {
-      toast.error("새 닉네임을 입력하거나 기존과 다른 닉네임을 사용해주세요.");
-      return;
-    }
-    setIsNicknameSubmitting(true);
-    try {
-      const response = await fetch("/api/settings/account", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nickname }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "닉네임 변경에 실패했습니다.");
-      }
-
+  // 닉네임 변경 mutation
+  const updateNicknameMutation = useMutation({
+    mutationFn: updateAccountNickname,
+    onSuccess: () => {
       toast.success("닉네임이 성공적으로 변경되었습니다.");
+      // 사용자 정보 캐시 무효화 및 리프레시
+      queryClient.invalidateQueries({ queryKey: ["user"] });
       refetch();
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "알 수 없는 오류가 발생했습니다."
-      );
-    } finally {
-      setIsNicknameSubmitting(false);
-    }
-  };
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || "알 수 없는 오류가 발생했습니다.");
+    },
+  });
 
-  const handlePasswordChange = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsPasswordSubmitting(true);
-    try {
-      const response = await fetch("/api/settings/account", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(passwordData),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "비밀번호 변경에 실패했습니다.");
-      }
-
+  // 비밀번호 변경 mutation
+  const updatePasswordMutation = useMutation({
+    mutationFn: updateAccountPassword,
+    onSuccess: (data) => {
       toast.success(data.message);
       setPasswordData({
         currentPassword: "",
         newPassword: "",
         confirmPassword: "",
       });
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "알 수 없는 오류가 발생했습니다."
-      );
-    } finally {
-      setIsPasswordSubmitting(false);
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || "알 수 없는 오류가 발생했습니다.");
+    },
+  });
+
+  const handleNicknameChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!nickname || nickname === user?.nickname) {
+      toast.error("새 닉네임을 입력하거나 기존과 다른 닉네임을 사용해주세요.");
+      return;
     }
+    updateNicknameMutation.mutate(nickname);
+  };
+
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    updatePasswordMutation.mutate(passwordData);
   };
 
   if (loading) {
@@ -145,8 +130,13 @@ export default function AccountSettingsPage() {
                 </div>
               </CardContent>
               <CardFooter className="border-t px-6 py-4">
-                <Button type="submit" disabled={isNicknameSubmitting}>
-                  {isNicknameSubmitting ? "저장 중..." : "닉네임 저장"}
+                <Button
+                  type="submit"
+                  disabled={updateNicknameMutation.isPending}
+                >
+                  {updateNicknameMutation.isPending
+                    ? "저장 중..."
+                    : "닉네임 저장"}
                 </Button>
               </CardFooter>
             </form>
@@ -208,8 +198,13 @@ export default function AccountSettingsPage() {
                 </div>
               </CardContent>
               <CardFooter className="border-t px-6 py-4">
-                <Button type="submit" disabled={isPasswordSubmitting}>
-                  {isPasswordSubmitting ? "변경 중..." : "비밀번호 변경"}
+                <Button
+                  type="submit"
+                  disabled={updatePasswordMutation.isPending}
+                >
+                  {updatePasswordMutation.isPending
+                    ? "변경 중..."
+                    : "비밀번호 변경"}
                 </Button>
               </CardFooter>
             </form>

@@ -1,7 +1,6 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { convertSurveyToApiFormat } from "@/app/(no-layout)/sign-up/components/survey";
@@ -10,62 +9,47 @@ import {
   SurveyStep,
 } from "@/app/(no-layout)/sign-up/components/survey-step";
 import { Skeleton } from "@/components/ui/skeleton";
+import { fetchSurvey, updateSurvey } from "@/lib/api/settings";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import PageHeader from "../../components/page-header";
 
 export default function ResetSurveyPage() {
   const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
-  const [isFetching, setIsFetching] = useState(true);
-  const [initialValues, setInitialValues] = useState<SurveyAnswers | null>(
-    null
-  );
 
-  useEffect(() => {
-    const fetchSurveyData = async () => {
-      setIsFetching(true);
-      try {
-        const response = await fetch("/api/survey");
-        if (response.ok) {
-          const data = await response.json();
-          // API 응답 형식에 따라 initialValues를 설정해야 합니다.
-          // 예를 들어, data.answer가 설문 답변 객체일 경우:
-          setInitialValues(data.answer);
-        }
-        // 404 Not Found의 경우, initialValues는 null로 유지되어 빈 폼으로 시작합니다.
-      } catch {
-        toast.error("기존 설문 정보를 불러오는 데 실패했습니다.");
-      } finally {
-        setIsFetching(false);
-      }
-    };
+  // 설문 데이터 가져오기 - React Query 사용
+  const {
+    data: surveyData,
+    isLoading: isFetching,
+    error: fetchError,
+  } = useQuery({
+    queryKey: ["survey"],
+    queryFn: fetchSurvey,
+    staleTime: 1000 * 60 * 5, // 5분간 fresh 상태 유지
+    gcTime: 1000 * 60 * 30, // 30분간 캐시 유지
+    retry: 1,
+  });
 
-    fetchSurveyData();
-  }, []);
-
-  const handleSubmit = async (values: SurveyAnswers) => {
-    setIsLoading(true);
-    try {
-      const surveyApiData = convertSurveyToApiFormat(values);
-      const response = await fetch("/api/survey", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(surveyApiData.answer),
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.error || "설문 업데이트에 실패했습니다.");
-      }
+  // 설문 업데이트 mutation
+  const updateSurveyMutation = useMutation({
+    mutationFn: (answer: unknown) => updateSurvey(answer),
+    onSuccess: () => {
       toast.success("투자 성향이 성공적으로 업데이트되었습니다.");
       router.push("/settings/account");
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "알 수 없는 오류가 발생했습니다."
-      );
-    } finally {
-      setIsLoading(false);
-    }
+    },
+    onError: (err: Error) => {
+      toast.error(err.message || "알 수 없는 오류가 발생했습니다.");
+    },
+  });
+
+  const handleSubmit = async (values: SurveyAnswers) => {
+    const surveyApiData = convertSurveyToApiFormat(values);
+    updateSurveyMutation.mutate(surveyApiData.answer);
   };
+
+  const initialValues =
+    surveyData && "answer" in surveyData
+      ? (surveyData.answer as SurveyAnswers)
+      : null;
 
   return (
     <div className="p-8 h-full">
@@ -81,10 +65,14 @@ export default function ResetSurveyPage() {
               <Skeleton className="h-40 w-full rounded-xl" />
               <Skeleton className="h-40 w-full rounded-xl" />
             </div>
+          ) : fetchError ? (
+            <div className="text-red-500">
+              기존 설문 정보를 불러오는 데 실패했습니다.
+            </div>
           ) : (
             <SurveyStep
               onSubmit={handleSubmit}
-              isLoading={isLoading}
+              isLoading={updateSurveyMutation.isPending}
               defaultValues={initialValues}
             />
           )}
