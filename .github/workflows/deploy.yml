@@ -51,6 +51,17 @@ jobs:
           EC2_USER: ${{ secrets.EC2_USER }}
           DEPLOY_PATH: ${{ secrets.EC2_DEPLOY_PATH }}
         run: |
+          echo "📦 프로젝트 파일을 EC2로 전송합니다..."
+          echo "배포 경로: $DEPLOY_PATH"
+          
+          # deploy.sh 파일이 존재하는지 확인
+          if [ ! -f "deploy.sh" ]; then
+            echo "❌ 로컬에 deploy.sh 파일이 없습니다!"
+            exit 1
+          fi
+          
+          echo "✅ deploy.sh 파일 확인됨"
+          
           # 프로젝트 파일을 EC2로 전송 (deploy.sh 포함)
           rsync -avz --delete \
             --exclude '.git' \
@@ -61,16 +72,40 @@ jobs:
             --exclude '.github' \
             -e "ssh -o StrictHostKeyChecking=no" \
             ./ $EC2_USER@$EC2_HOST:$DEPLOY_PATH/
+          
+          if [ $? -eq 0 ]; then
+            echo "✅ 파일 전송 완료"
+          else
+            echo "❌ 파일 전송 실패"
+            exit 1
+          fi
 
-      - name: Run deployment script on EC2
+      - name: Verify files and run deployment script on EC2
         env:
           EC2_HOST: ${{ secrets.EC2_HOST }}
           EC2_USER: ${{ secrets.EC2_USER }}
           DEPLOY_PATH: ${{ secrets.EC2_DEPLOY_PATH }}
         run: |
-          ssh -o StrictHostKeyChecking=no $EC2_USER@$EC2_HOST << 'ENDSSH'
-            cd $DEPLOY_PATH
+          ssh -o StrictHostKeyChecking=no $EC2_USER@$EC2_HOST bash << EOF
+            set -e
+            DEPLOY_PATH="${{ secrets.EC2_DEPLOY_PATH }}"
+            
+            echo "📁 배포 경로 확인: \$DEPLOY_PATH"
+            cd "\$DEPLOY_PATH" || exit 1
+            
+            echo "📋 전송된 파일 확인:"
+            ls -la | head -20
+            
+            if [ ! -f "deploy.sh" ]; then
+              echo "❌ deploy.sh 파일을 찾을 수 없습니다."
+              echo "현재 디렉토리: \$(pwd)"
+              echo "디렉토리 내용:"
+              ls -la
+              exit 1
+            fi
+            
+            echo "✅ deploy.sh 파일 확인됨"
             chmod +x deploy.sh
             ./deploy.sh
-          ENDSSH
+          EOF
 

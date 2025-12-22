@@ -235,19 +235,23 @@ vercel --prod
    npm run prisma:generate
    ```
 
-3. **Docker 권한 문제** (Linux/Mac)
+3. **PM2 관련 문제**
    ```bash
-   sudo docker-compose up -d
+   # PM2 재시작
+   pm2 restart stockelper-fe
+   
+   # PM2 로그 확인
+   pm2 logs stockelper-fe --lines 100
    ```
 
 ### 로그 확인
 
 ```bash
-# Docker Compose 로그
-docker-compose logs -f
+# PM2 로그 확인
+pm2 logs stockelper-fe
 
-# 특정 서비스 로그
-docker-compose logs -f nextjs
+# 실시간 로그 확인
+pm2 logs stockelper-fe --lines 50 -f
 ```
 
 ## 🤝 개발 가이드
