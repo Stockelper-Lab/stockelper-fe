@@ -97,7 +97,7 @@ nano .env
 필요한 환경 변수:
 ```env
 NODE_ENV=production
-DATABASE_URL=postgresql://postgres:postgres@10.0.10.74:5432/llm_users
+DATABASE_URL=postgresql://username:password@host:port/database
 JWT_SECRET=your-secret-key
 JWT_EXPIRES_IN=7d
 COOKIE_NAME=auth-token

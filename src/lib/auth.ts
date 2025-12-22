@@ -3,6 +3,24 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { cookies } from "next/headers";
 
+// JWT 시크릿 키 검증 - 프로덕션에서 반드시 환경변수 설정 필요
+function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error(
+        "JWT_SECRET 환경변수가 설정되지 않았습니다. 프로덕션 환경에서는 반드시 설정해야 합니다."
+      );
+    }
+    // 개발 환경에서만 경고 출력 후 폴백 사용
+    console.warn(
+      "⚠️ JWT_SECRET 환경변수가 설정되지 않았습니다. 개발용 키를 사용합니다."
+    );
+    return "dev-only-secret-do-not-use-in-production";
+  }
+  return secret;
+}
+
 // 비밀번호 해싱
 export async function hashPassword(password: string): Promise<string> {
   const salt = await bcrypt.genSalt(10);
@@ -19,9 +37,7 @@ export async function verifyPassword(
 
 // JWT 토큰 생성
 export function generateToken(userId: string): string {
-  const secret = process.env.JWT_SECRET || "auth-secret-stock";
-
-  return jwt.sign({ userId }, secret, {
+  return jwt.sign({ userId }, getJwtSecret(), {
     expiresIn: "7d",
   });
 }
@@ -29,10 +45,7 @@ export function generateToken(userId: string): string {
 // JWT 토큰 검증
 export function verifyToken(token: string): { userId: string } | null {
   try {
-    const secret =
-      process.env.JWT_SECRET ||
-      "your_super_secret_key_change_this_in_production";
-    const decoded = jwt.verify(token, secret) as { userId: string };
+    const decoded = jwt.verify(token, getJwtSecret()) as { userId: string };
     return decoded;
   } catch (error) {
     console.error("토큰 검증 오류:", error);
