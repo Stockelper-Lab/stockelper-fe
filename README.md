@@ -1,7 +1,7 @@
 # Stockelper 프론트엔드
 
 이 프로젝트는 **Next.js 15** 기반의 주식 관련 서비스 프론트엔드입니다.  
-Docker 및 npm을 이용해 손쉽게 개발 및 배포할 수 있습니다.
+pnpm을 이용해 손쉽게 개발 및 배포할 수 있습니다.
 
 ## 📋 주요 기술 스택
 
@@ -11,7 +11,7 @@ Docker 및 npm을 이용해 손쉽게 개발 및 배포할 수 있습니다.
 - **Authentication**: JWT, bcryptjs
 - **UI Components**: Radix UI, Lucide React
 - **Notifications**: Sonner (Toast notifications)
-- **Deployment**: Docker, Docker Compose
+- **Deployment**: PM2, GitHub Actions
 
 ## 🚀 빠른 시작
 
@@ -69,44 +69,45 @@ pnpm dev
 
 브라우저에서 [http://localhost:3000](http://localhost:3000)에 접속하여 애플리케이션을 확인하세요.
 
-## 🐳 Docker로 실행하기
+## 🚀 프로덕션 실행
 
-### Docker Compose 사용 (권장)
+### PM2를 사용한 프로덕션 실행
 
-1. **환경 변수 설정**
-
-   ```bash
-   cp .env.example .env
-   # .env 파일을 실제 환경에 맞게 수정하세요
-   ```
-
-2. **서비스 실행**
+1. **프로젝트 빌드**
 
    ```bash
-   docker-compose up -d
+   pnpm build
    ```
 
-3. **접속 확인**
+2. **PM2로 실행**
 
-   - 애플리케이션: [http://localhost:21011](http://localhost:21011)
-
-4. **서비스 중지**
    ```bash
-   docker-compose down
+   # PM2 설치 (전역)
+   npm install -g pm2
+   
+   # 애플리케이션 시작
+   pm2 start "pnpm start" --name stockelper-fe
+   
+   # 자동 시작 설정
+   pm2 startup
+   pm2 save
    ```
 
-### 개별 Docker 실행
+3. **PM2 관리 명령어**
 
-```bash
-# 이미지 빌드
-docker build -t stockelper-frontend .
-
-# 컨테이너 실행
-docker run -p 3000:3000 \
-  -e DATABASE_URL="your_database_url" \
-  -e JWT_SECRET="your_jwt_secret" \
-  stockelper-frontend
-```
+   ```bash
+   # 프로세스 목록 확인
+   pm2 list
+   
+   # 로그 확인
+   pm2 logs stockelper-fe
+   
+   # 재시작
+   pm2 restart stockelper-fe
+   
+   # 중지
+   pm2 stop stockelper-fe
+   ```
 
 ## 📦 주요 npm 스크립트
 
@@ -195,6 +196,17 @@ NODE_ENV=production
 
 ## 🚀 배포
 
+### AWS EC2 자동 배포 (GitHub Actions)
+
+이 프로젝트는 GitHub Actions를 통해 AWS EC2에 자동으로 배포됩니다.
+
+자세한 배포 가이드는 [DEPLOY.md](./DEPLOY.md)를 참고하세요.
+
+**주요 기능:**
+- `main` 브랜치에 push 시 자동 배포
+- PM2를 사용한 프로세스 관리
+- 자동 빌드 및 재시작
+
 ### Vercel 배포
 
 ```bash
@@ -203,20 +215,6 @@ npm i -g vercel
 
 # 배포
 vercel --prod
-```
-
-### Docker 기반 배포
-
-```bash
-# 프로덕션 이미지 빌드
-docker build -t stockelper-frontend:latest .
-
-# 컨테이너 실행
-docker run -d \
-  --name stockelper-frontend \
-  -p 3000:3000 \
-  --env-file .env.production \
-  stockelper-frontend:latest
 ```
 
 ## 🐛 문제 해결

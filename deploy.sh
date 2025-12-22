@@ -13,46 +13,71 @@ cd "$SCRIPT_DIR"
 
 echo "📁 작업 디렉토리: $(pwd)"
 
-# Docker 및 Docker Compose 확인
-if ! command -v docker &> /dev/null; then
-    echo "❌ Docker가 설치되어 있지 않습니다."
+# Node.js 확인
+if ! command -v node &> /dev/null; then
+    echo "❌ Node.js가 설치되어 있지 않습니다."
     exit 1
 fi
 
-if ! command -v docker-compose &> /dev/null; then
-    echo "❌ Docker Compose가 설치되어 있지 않습니다."
-    exit 1
+echo "✅ Node.js 버전: $(node --version)"
+
+# pnpm 확인 및 설치
+if ! command -v pnpm &> /dev/null; then
+    echo "📦 pnpm을 설치합니다..."
+    npm install -g pnpm
 fi
 
-# 기존 컨테이너 중지 및 제거
-echo "📦 기존 컨테이너를 중지합니다..."
-docker-compose down || true
+echo "✅ pnpm 버전: $(pnpm --version)"
 
-# 이미지 정리 (선택사항 - 디스크 공간 확보)
-echo "🧹 오래된 이미지를 정리합니다..."
-docker system prune -f
+# PM2 확인 및 설치
+if ! command -v pm2 &> /dev/null; then
+    echo "📦 PM2를 설치합니다..."
+    npm install -g pm2
+fi
 
-# Docker Compose로 빌드 및 실행
-echo "🔨 새 이미지를 빌드합니다..."
-docker-compose build --no-cache
+echo "✅ PM2 버전: $(pm2 --version)"
 
-echo "🚀 컨테이너를 시작합니다..."
-docker-compose up -d
+# 의존성 설치
+echo "📦 의존성을 설치합니다..."
+pnpm install --frozen-lockfile
 
-# 컨테이너 상태 확인
-echo "⏳ 컨테이너가 정상적으로 시작되는지 확인합니다..."
-sleep 10
+# Prisma 클라이언트 생성
+echo "🔧 Prisma 클라이언트를 생성합니다..."
+pnpm prisma:generate || pnpm exec prisma generate
 
-if docker-compose ps | grep -q "Up"; then
+# 프로젝트 빌드
+echo "🔨 프로젝트를 빌드합니다..."
+pnpm build
+
+# PM2로 애플리케이션 실행 또는 재시작
+APP_NAME="stockelper-fe"
+PM2_SCRIPT="pnpm start"
+
+echo "🚀 PM2로 애플리케이션을 시작합니다..."
+
+# PM2 프로세스가 실행 중인지 확인
+if pm2 list | grep -q "$APP_NAME"; then
+    echo "🔄 기존 프로세스를 재시작합니다..."
+    pm2 restart $APP_NAME
+else
+    echo "✨ 새 프로세스를 시작합니다..."
+    pm2 start "$PM2_SCRIPT" --name $APP_NAME
+fi
+
+# PM2 시작 시 자동 실행 설정
+pm2 startup
+pm2 save
+
+# 상태 확인
+echo "⏳ 애플리케이션이 정상적으로 시작되는지 확인합니다..."
+sleep 5
+
+if pm2 list | grep -q "$APP_NAME.*online"; then
     echo "✅ 배포가 성공적으로 완료되었습니다!"
-    docker-compose ps
+    pm2 list
+    pm2 logs $APP_NAME --lines 20 --nostream
 else
     echo "❌ 배포 중 오류가 발생했습니다."
-    docker-compose logs
+    pm2 logs $APP_NAME --lines 50
     exit 1
 fi
-
-# 로그 확인 (선택사항)
-echo "📋 최근 로그:"
-docker-compose logs --tail=50
-

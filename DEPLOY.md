@@ -6,23 +6,36 @@
 
 ### 1. EC2 인스턴스 설정
 
-1. **Docker 및 Docker Compose 설치**
+1. **Node.js 설치** (v18 이상 권장)
    ```bash
    # EC2 인스턴스에 SSH 접속 후 실행
-   sudo apt-get update
-   sudo apt-get install -y docker.io docker-compose
-   sudo usermod -aG docker $USER
-   # 재로그인 필요
+   curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+   sudo apt-get install -y nodejs
+   
+   # 버전 확인
+   node --version
+   npm --version
    ```
 
-2. **배포 디렉토리 생성**
+2. **pnpm 설치** (자동 설치되지만 수동 설치도 가능)
+   ```bash
+   npm install -g pnpm
+   ```
+
+3. **PM2 설치** (자동 설치되지만 수동 설치도 가능)
+   ```bash
+   npm install -g pm2
+   ```
+
+4. **배포 디렉토리 생성**
    ```bash
    mkdir -p /home/ubuntu/stockelper-fe
+   chmod 755 /home/ubuntu/stockelper-fe
    ```
 
-3. **네트워크 설정 확인**
-   - docker-compose.yml에서 사용하는 네트워크가 존재하는지 확인
-   - 없으면 생성: `docker network create stockelper`
+5. **포트 설정 확인**
+   - 애플리케이션이 사용할 포트(기본 3000)가 열려있는지 확인
+   - EC2 보안 그룹에서 해당 포트 허용
 
 ### 2. SSH 키 생성 및 설정
 
@@ -104,12 +117,43 @@ NEXT_PUBLIC_LLM_ENDPOINT=https://stockelper-llm.peo.kr
 
 1. **코드 체크아웃**: GitHub에서 최신 코드를 가져옵니다.
 2. **SSH 설정**: SSH 키를 사용하여 EC2에 접속할 수 있도록 설정합니다.
-3. **파일 전송**: rsync를 사용하여 프로젝트 파일을 EC2로 전송합니다.
-4. **배포 실행**: EC2에서 `deploy.sh` 스크립트를 실행하여:
-   - 기존 컨테이너 중지
-   - 새 이미지 빌드
-   - 컨테이너 시작
+3. **디렉토리 준비**: 배포 디렉토리를 생성하고 권한을 설정합니다.
+4. **파일 전송**: rsync를 사용하여 프로젝트 파일을 EC2로 전송합니다.
+5. **배포 실행**: EC2에서 `deploy.sh` 스크립트를 실행하여:
+   - Node.js, pnpm, PM2 확인 및 설치
+   - 의존성 설치 (`pnpm install`)
+   - Prisma 클라이언트 생성
+   - 프로젝트 빌드 (`pnpm build`)
+   - PM2로 애플리케이션 실행 또는 재시작
    - 상태 확인
+
+## PM2 명령어
+
+배포 후 EC2에서 직접 PM2를 관리할 수 있습니다:
+
+```bash
+# 프로세스 목록 확인
+pm2 list
+
+# 로그 확인
+pm2 logs stockelper-fe
+
+# 프로세스 재시작
+pm2 restart stockelper-fe
+
+# 프로세스 중지
+pm2 stop stockelper-fe
+
+# 프로세스 삭제
+pm2 delete stockelper-fe
+
+# 모니터링
+pm2 monit
+
+# PM2 시작 시 자동 실행 설정
+pm2 startup
+pm2 save
+```
 
 ## 문제 해결
 
@@ -119,14 +163,24 @@ NEXT_PUBLIC_LLM_ENDPOINT=https://stockelper-llm.peo.kr
 - EC2_HOST가 올바른지 확인
 
 ### 배포 실패
-- EC2에서 Docker 및 Docker Compose가 설치되어 있는지 확인
+- EC2에서 Node.js가 설치되어 있는지 확인: `node --version`
 - 배포 경로에 쓰기 권한이 있는지 확인
-- `docker-compose logs`로 로그 확인
+- `pm2 logs stockelper-fe`로 로그 확인
 
-### 컨테이너가 시작되지 않음
+### 애플리케이션이 시작되지 않음
 - 환경 변수가 올바르게 설정되었는지 확인
 - 데이터베이스 연결이 가능한지 확인
-- 포트가 이미 사용 중인지 확인: `sudo lsof -i :21011`
+- 포트가 이미 사용 중인지 확인: `sudo lsof -i :3000`
+- 빌드 오류 확인: `cd $DEPLOY_PATH && pnpm build`
+
+### 권한 오류
+- 배포 디렉토리 권한 확인: `ls -la $DEPLOY_PATH`
+- 필요시 권한 수정: `sudo chown -R $USER:$USER $DEPLOY_PATH`
+
+### PM2 관련 문제
+- PM2가 설치되어 있는지 확인: `pm2 --version`
+- PM2 프로세스 상태 확인: `pm2 status`
+- PM2 로그 확인: `pm2 logs --lines 100`
 
 ## 추가 설정 (선택사항)
 
@@ -142,3 +196,13 @@ Slack, Discord 등으로 배포 알림을 받으려면 `.github/workflows/deploy
 
 배포 후 애플리케이션이 정상적으로 동작하는지 확인하는 health check를 추가할 수 있습니다.
 
+### PM2 클러스터 모드
+
+더 많은 성능이 필요한 경우 PM2 클러스터 모드를 사용할 수 있습니다:
+```bash
+pm2 start "pnpm start" --name stockelper-fe -i max
+```
+
+### 리버스 프록시 설정 (Nginx)
+
+포트 3000 대신 80/443 포트로 접근하려면 Nginx를 설정할 수 있습니다.
