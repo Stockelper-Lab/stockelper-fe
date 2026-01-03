@@ -1,306 +1,184 @@
 # Stockelper 프론트엔드
 
-이 프로젝트는 **Next.js 15** 기반의 주식 관련 서비스 프론트엔드입니다.  
-pnpm을 이용해 손쉽게 개발 및 배포할 수 있습니다.
+Next.js 15 기반의 AI 기반 주식 투자 플랫폼 프론트엔드입니다.
 
-## 📋 주요 기술 스택
+## 📋 기술 스택
 
-- **Frontend**: Next.js 15, React 19, TypeScript
-- **Database**: PostgreSQL, Prisma ORM
-- **Styling**: Tailwind CSS
-- **Authentication**: JWT, bcryptjs
-- **UI Components**: Radix UI, Lucide React
-- **Notifications**: Sonner (Toast notifications)
-- **Deployment**: PM2, GitHub Actions
+- **Frontend**: Next.js 15.3, React 19, TypeScript 5.8
+- **Database**: PostgreSQL, Prisma ORM 6.6
+- **Styling**: Tailwind CSS 4.1, Radix UI
+- **State Management**: TanStack React Query 5.90
+- **Authentication**: JWT (jsonwebtoken, bcryptjs)
+- **Form Validation**: React Hook Form 7.55, Zod 3.24
+- **Markdown**: react-markdown 10.1 (remark-gfm, rehype-raw, rehype-sanitize)
+- **Visualization**: XYFlow/React 12.6 (ReactFlow)
+- **Notifications**: Sonner 2.0
+- **Animation**: Framer Motion 12.7
+- **Icons**: Lucide React 0.488
 
 ## 🚀 빠른 시작
 
-### 1. 프로젝트 클론
+### 1. 의존성 설치
 
 ```bash
-git clone <repository-url>
-cd new-fe
-```
-
-### 2. 의존성 설치
-
-```bash
-npm install
-# 또는
 pnpm install
 ```
 
-### 3. 환경 변수 설정
+### 2. 환경 변수 설정
 
-프로젝트 루트에 `.env` 파일을 생성하고 다음 변수들을 설정하세요:
+`.env` 파일 생성:
 
 ```env
-# 데이터베이스 연결
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/postgres
+# 데이터베이스
+DATABASE_URL=postgresql://user:password@host:5432/database
 
 # JWT 인증
-JWT_SECRET=your_super_secret_jwt_key_here
+JWT_SECRET=your_super_secret_jwt_key_min_32_characters
 JWT_EXPIRES_IN=7d
-
-# 쿠키 설정
 COOKIE_NAME=auth-token
 
 # LLM 서비스 엔드포인트 (서버 사이드 전용)
-# LLM_ENDPOINT를 우선 사용하며, 하위 호환성을 위해 NEXT_PUBLIC_LLM_ENDPOINT도 지원합니다.
 LLM_ENDPOINT=https://your-llm-service-endpoint
-# 또는
-# NEXT_PUBLIC_LLM_ENDPOINT=https://your-llm-service-endpoint
 
-# 환경 설정
+# 환경
 NODE_ENV=development
 ```
 
-### 4. 데이터베이스 마이그레이션
+### 3. 데이터베이스 마이그레이션
 
 ```bash
-npm run prisma:migrate
-npm run prisma:generate
+pnpm prisma:migrate
+pnpm prisma:generate
 ```
 
-### 5. 개발 서버 실행
+### 4. 개발 서버 실행
 
 ```bash
-npm run dev
-# 또는
 pnpm dev
 ```
 
-브라우저에서 [http://localhost:3000](http://localhost:3000)에 접속하여 애플리케이션을 확인하세요.
+브라우저에서 [http://localhost:3000](http://localhost:3000) 접속
 
-## 🚀 프로덕션 실행
+## 📁 주요 페이지
 
-### PM2를 사용한 프로덕션 실행
+### 인증 페이지 (레이아웃 없음)
+- `/sign-in` - 로그인
+- `/sign-up` - 회원가입 (2단계: 사용자 정보 + 투자 성향 설문조사)
 
-1. **프로젝트 빌드**
+### 메인 페이지 (레이아웃 포함)
+- `/dashboard` - 대시보드
+- `/chat` - AI 어시스턴트 채팅
+- `/chat/[id]` - 개별 대화
+- `/analysis` - 분석
+- `/settings` - 설정 허브
+- `/settings/account` - 계정 설정 (닉네임, 비밀번호 변경)
+- `/settings/kis` - KIS 증권 API 설정
+- `/settings/survey` - 투자 성향 설문 재설정
 
-   ```bash
-   pnpm build
-   ```
+## 🔌 API 엔드포인트
 
-2. **PM2로 실행**
+### 인증
+- `POST /api/auth/register` - 회원가입 (투자 성향 평가 포함)
+- `POST /api/auth/login` - 로그인 (JWT 쿠키 반환)
+- `GET /api/auth/me` - 현재 사용자 정보
+- `POST /api/auth/logout` - 로그아웃
 
-   ```bash
-   # PM2 설치 (전역)
-   npm install -g pm2
-   
-   # 애플리케이션 시작
-   pm2 start "pnpm start" --name stockelper-fe
-   
-   # 자동 시작 설정
-   pm2 startup
-   pm2 save
-   ```
+### 대화
+- `GET /api/conversations` - 대화 목록
+- `POST /api/conversations` - 새 대화 생성
+- `GET /api/conversations/[id]` - 대화 상세
+- `PUT /api/conversations/[id]` - 대화 수정
+- `DELETE /api/conversations/[id]` - 대화 삭제
+- `GET /api/conversations/[id]/messages` - 메시지 목록 (페이지네이션)
+- `POST /api/conversations/[id]/messages` - 메시지 저장
+- `POST /api/conversations/[id]/feedback` - 피드백 제출
 
-3. **PM2 관리 명령어**
+### 채팅
+- `POST /api/chat` - LLM 스트리밍 응답 (외부 LLM 서비스 호출)
 
-   ```bash
-   # 프로세스 목록 확인
-   pm2 list
-   
-   # 로그 확인
-   pm2 logs stockelper-fe
-   
-   # 재시작
-   pm2 restart stockelper-fe
-   
-   # 중지
-   pm2 stop stockelper-fe
-   ```
+### 설정
+- `PUT /api/settings/account` - 닉네임/비밀번호 변경
+- `GET /api/settings/kis` - KIS API 정보 조회
+- `PUT /api/settings/kis` - KIS API 정보 업데이트
+
+### 설문조사
+- `POST /api/survey` - 투자 성향 설문 제출/수정
+
+## 🗃️ 데이터베이스 스키마
+
+### users
+- 사용자 계정 정보
+- KIS 증권 API 자격증명 (kis_app_key, kis_app_secret, kis_access_token, account_no)
+- 투자자 유형 (investor_type: 안정형, 안정추구형, 위험중립형, 적극투자형, 공격투자형)
+
+### survey
+- 사용자별 투자 성향 설문 답변 (JSON 형식)
+- 8개 질문 (q1-q8): 투자 경험, 투자 목적, 위험 선호도 등
+
+### Conversation
+- 채팅 대화방 (UUID, 제목, 사용자 연결)
+
+### Chat
+- 채팅 메시지 (user, assistant, question)
+- 서브그래프 데이터, 거래 액션 데이터 포함
+- 피드백 (humanFeedbackResponse: true/false/null)
 
 ## 📦 주요 npm 스크립트
 
-| 명령어                    | 설명                           |
-| ------------------------- | ------------------------------ |
-| `npm run dev`             | 개발 서버 실행 (포트 3000)     |
-| `npm run build`           | 프로덕션 빌드                  |
-| `npm run start`           | 빌드된 애플리케이션 실행       |
-| `npm run lint`            | ESLint 코드 검사               |
-| `npm run typecheck`       | TypeScript 타입 검사           |
-| `npm run prisma:generate` | Prisma 클라이언트 생성         |
-| `npm run prisma:migrate`  | 데이터베이스 마이그레이션 실행 |
-| `npm run prisma:studio`   | Prisma Studio 실행 (DB GUI)    |
+```bash
+pnpm dev                 # 개발 서버 실행 (포트 3000)
+pnpm build              # 프로덕션 빌드
+pnpm start              # 빌드된 앱 실행 (포트 80)
+pnpm lint               # ESLint 검사
+pnpm typecheck          # TypeScript 타입 검사
+pnpm prisma:generate    # Prisma 클라이언트 생성
+pnpm prisma:migrate     # 마이그레이션 실행
+pnpm prisma:studio      # Prisma Studio (DB GUI)
+```
 
-## 🗃️ 데이터베이스 관리
+## 🚀 프로덕션 배포
 
-### 마이그레이션
+### PM2 사용
 
 ```bash
-# 새 마이그레이션 생성 및 적용
-npm run prisma:migrate
+# 빌드
+pnpm build
 
-# 마이그레이션 리셋 (개발 환경만)
-npm run prisma:migrate-reset
-
-# 기존 DB에서 스키마 가져오기
-npm run prisma:pull
+# PM2로 실행
+pm2 start "pnpm start" --name stockelper-fe
+pm2 startup
+pm2 save
 ```
 
-### Prisma Studio
+### GitHub Actions 자동 배포
 
-```bash
-npm run prisma:studio
-```
+`main` 브랜치 push 시 AWS EC2에 자동 배포됩니다.
 
-웹 브라우저에서 데이터베이스를 시각적으로 관리할 수 있습니다.
+## 🔒 보안 주의사항
 
-## 🏗️ 프로젝트 구조
-
-```
-src/
-├── app/                 # Next.js App Router
-│   ├── (has-layout)/   # 레이아웃이 있는 페이지
-│   │   ├── settings/   # 설정 페이지들
-│   │   │   ├── account/    # 계정 설정 (닉네임, 비밀번호)
-│   │   │   ├── kis/        # KIS 증권 API 설정
-│   │   │   └── survey/     # 설문조사 재설정
-│   │   ├── chat/       # 채팅 페이지
-│   │   └── dashboard/  # 대시보드
-│   ├── (no-layout)/    # 레이아웃이 없는 페이지
-│   │   ├── sign-in/    # 로그인
-│   │   └── sign-up/    # 회원가입
-│   └── api/            # API 라우트
-│       ├── auth/       # 인증 API
-│       ├── settings/   # 설정 관련 API
-│       └── survey/     # 설문조사 API
-├── components/         # React 컴포넌트
-│   ├── chat/          # 채팅 관련 컴포넌트
-│   ├── ui/            # 공통 UI 컴포넌트
-│   └── ...
-├── lib/               # 유틸리티 및 설정
-│   ├── auth.ts        # 인증 로직
-│   ├── db.ts          # 데이터베이스 설정
-│   └── ...
-├── hooks/             # 커스텀 React 훅
-└── generated/         # Prisma 생성 파일
-```
-
-## 🔒 보안 및 주의사항
-
-### 환경 변수 보안
-
-- **절대로 `.env` 파일을 git에 커밋하지 마세요!**
-- 프로덕션 환경에서는 강력한 JWT_SECRET을 사용하세요
+- `.env` 파일을 절대 커밋하지 마세요
+- 프로덕션에서 강력한 JWT_SECRET 사용 (32자 이상)
 - 데이터베이스 접속 정보를 코드에 하드코딩하지 마세요
-
-### 기본 보안 설정
-
-```env
-# 강력한 JWT 시크릿 예시 (실제로는 더 복잡하게)
-JWT_SECRET=your_very_long_and_complex_secret_key_min_32_characters
-
-# 프로덕션 환경 설정
-NODE_ENV=production
-```
-
-## 🚀 배포
-
-### AWS EC2 자동 배포 (GitHub Actions)
-
-이 프로젝트는 GitHub Actions를 통해 AWS EC2에 자동으로 배포됩니다.
-
-자세한 배포 가이드는 [DEPLOY.md](./DEPLOY.md)를 참고하세요.
-
-**주요 기능:**
-- `main` 브랜치에 push 시 자동 배포
-- PM2를 사용한 프로세스 관리
-- 자동 빌드 및 재시작
-
-### Vercel 배포
-
-```bash
-# Vercel CLI 설치
-npm i -g vercel
-
-# 배포
-vercel --prod
-```
 
 ## 🐛 문제 해결
 
-### 일반적인 문제들
-
-1. **포트 충돌**
-
-   ```bash
-   # 다른 포트로 개발 서버 실행
-   npm run dev -- -p 3001
-   ```
-
-2. **Prisma 관련 오류**
-
-   ```bash
-   # Prisma 클라이언트 재생성
-   npm run prisma:generate
-   ```
-
-3. **PM2 관련 문제**
-   ```bash
-   # PM2 재시작
-   pm2 restart stockelper-fe
-   
-   # PM2 로그 확인
-   pm2 logs stockelper-fe --lines 100
-   ```
-
-### 로그 확인
-
+### 포트 충돌
 ```bash
-# PM2 로그 확인
-pm2 logs stockelper-fe
-
-# 실시간 로그 확인
-pm2 logs stockelper-fe --lines 50 -f
+pnpm dev -- -p 3001
 ```
 
-## 🤝 개발 가이드
-
-### 코드 스타일
-
-- ESLint 설정을 따라주세요
-- TypeScript 타입을 명시적으로 작성해주세요
-- 컴포넌트는 함수형으로 작성해주세요
-
-### 커밋 전 체크리스트
-
+### Prisma 오류
 ```bash
-# 타입 검사
-npm run typecheck
-
-# 린트 검사
-npm run lint
-
-# 빌드 테스트
-npm run build
+pnpm prisma:generate
 ```
 
-## 🆕 최근 업데이트 (v0.1.0)
-
-### 새로운 기능
-
-- **계정 설정 페이지**: 사용자 닉네임 및 비밀번호 변경 기능
-- **KIS 증권 API 설정**: KIS 앱키, 앱시크릿, 계좌번호 관리
-- **설문조사 재설정**: 기존 설문조사 답변 수정 기능
-- **Sonner 알림 시스템**: react-hot-toast에서 sonner로 교체하여 더 나은 사용자 경험 제공
-- **데이터베이스 제약 조건 강화**: 사용자별 고유 제약 조건 추가로 데이터 무결성 향상
-
-### 개선사항
-
-- 설정 페이지 UI/UX 개선
-- API 라우트 구조 최적화
-- 사용자 인증 및 권한 관리 강화
-- 폼 유효성 검사 및 오류 처리 개선
+### PM2 문제
+```bash
+pm2 restart stockelper-fe
+pm2 logs stockelper-fe --lines 100
+```
 
 ## 📞 문의 및 지원
 
-- 버그 리포트: Issues 탭 활용
-- 기능 요청: Pull Request 환영
-- 기술적 문의: 이슈로 등록
-
----
-
-**⚠️ 중요**: 이 프로젝트를 공개 저장소에 올리기 전에 모든 민감 정보(API 키, 데이터베이스 정보, JWT 시크릿 등)가 제거되었는지 확인하세요.
+- 버그 리포트: Issues 탭
+- 기능 요청: Pull Request
