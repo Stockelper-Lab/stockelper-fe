@@ -49,12 +49,19 @@ pnpm prisma:generate || pnpm exec prisma generate
 echo "🔧 Prisma 마이그레이션을 적용합니다..."
 pnpm prisma:migrate-deploy || pnpm exec prisma migrate deploy
 
+# PM2로 애플리케이션 실행 또는 재시작
+APP_NAME="stockelper-fe"
+
+# 빌드 전에 PM2 프로세스 중지 (메모리 최적화)
+if pm2 list | grep -q "$APP_NAME"; then
+    echo "⏸️  빌드 전에 기존 PM2 프로세스를 중지합니다 (메모리 최적화)..."
+    pm2 stop $APP_NAME 2>/dev/null || true
+    pm2 delete $APP_NAME 2>/dev/null || true
+fi
+
 # 프로젝트 빌드
 echo "🔨 프로젝트를 빌드합니다..."
 pnpm build
-
-# PM2로 애플리케이션 실행 또는 재시작
-APP_NAME="stockelper-fe"
 
 echo "🚀 PM2로 애플리케이션을 시작합니다..."
 
@@ -67,12 +74,6 @@ if ! getcap $(which node) 2>/dev/null | grep -q "cap_net_bind_service"; then
         echo "⚠️  또는 다음 명령어를 수동으로 실행하세요:"
         echo "   sudo setcap 'cap_net_bind_service=+ep' \$(which node)"
     }
-fi
-
-# PM2 프로세스가 실행 중인지 확인
-if pm2 list | grep -q "$APP_NAME"; then
-    echo "🔄 기존 프로세스를 재시작합니다..."
-    pm2 delete $APP_NAME 2>/dev/null || true
 fi
 
 echo "✨ 새 프로세스를 시작합니다..."
