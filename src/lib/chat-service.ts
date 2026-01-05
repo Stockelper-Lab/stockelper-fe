@@ -99,6 +99,64 @@ export async function getMessages(conversationId: string) {
   return formattedMessages;
 }
 
+// 특정 채팅방의 최신 메시지 N개 조회 (페이지네이션용)
+export async function getLatestMessages(
+  conversationId: string,
+  limit: number = 10
+) {
+  // 전체 메시지 개수 확인
+  const totalCount = await prisma.chat.count({
+    where: {
+      conversationId,
+    },
+  });
+
+  // 최신 메시지부터 limit개 가져오기 (내림차순)
+  const latestMessages = await prisma.chat.findMany({
+    where: {
+      conversationId,
+    },
+    orderBy: {
+      timestamp: "desc",
+    },
+    take: limit,
+  });
+
+  // 오름차순으로 정렬 (오래된 메시지가 먼저 오도록)
+  const sortedMessages = latestMessages.reverse();
+
+  // DB에서 가져온 메시지를 프론트엔드 타입으로 변환
+  const formattedMessages: Message[] = sortedMessages.map((message: Chat) => {
+    let subgraph: Subgraph | undefined = undefined;
+    let tradingAction: TradingAction | null = null;
+
+    if (message.subgraphData) {
+      subgraph = message.subgraphData as unknown as Subgraph;
+    }
+
+    if (message.tradingActionData) {
+      tradingAction = message.tradingActionData as unknown as TradingAction;
+    }
+
+    return {
+      id: message.messageId,
+      role: message.role as "user" | "assistant" | "question",
+      content: message.content,
+      timestamp: message.timestamp,
+      subgraph,
+      trading_action: tradingAction,
+      error: message.errorMessage || null,
+      feedbackResponse: message.humanFeedbackResponse,
+    };
+  });
+
+  return {
+    messages: formattedMessages,
+    hasMore: totalCount > limit,
+    totalCount,
+  };
+}
+
 // 메시지 저장
 export async function saveMessage(conversationId: string, message: Message) {
   // 채팅방 활성 시간 업데이트

@@ -1,14 +1,14 @@
 import { useUser } from "@/hooks/use-user";
-import { ConversationInfo } from "@/lib/chat-service";
 import {
-  fetchConversations,
-  fetchConversationMessages,
   createConversation,
-  updateConversationTitle,
   deleteConversation,
+  fetchConversations,
+  updateConversationTitle
 } from "@/lib/api/conversations";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useState } from "react";
+import { ConversationInfo } from "@/lib/chat-service";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import {
   sendFeedback as apiSendFeedback,
   sendMessage as apiSendMessage,
@@ -61,15 +61,21 @@ export const DUMMY_STOCK_INFO: StockInfo = {
 interface ChatBotOptions {
   conversationId?: string;
   showChatList?: boolean;
+  initialMessages?: Message[];
+  initialHasMore?: boolean;
+  initialTotalCount?: number;
 }
 
 export function useChatBot(options?: ChatBotOptions) {
   const {
     conversationId: initialConversationId,
     showChatList: initialShowChatList,
+    initialMessages = [],
+    initialHasMore = false,
+    initialTotalCount = 0,
   } = options || {};
 
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [streamingMessage, setStreamingMessage] = useState<Message | null>(
     null
   );
@@ -94,11 +100,12 @@ export function useChatBot(options?: ChatBotOptions) {
   const queryClient = useQueryClient();
 
   // 페이지네이션 관련 상태
-  const [hasMore, setHasMore] = useState(false);
+  const [hasMore, setHasMore] = useState(initialHasMore);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   // 전체 메시지 카운트 (현재는 사용되지 않지만, 향후 UI에 표시할 수 있음)
-  const [totalMessageCount, setTotalMessageCount] = useState(0); // eslint-disable-line @typescript-eslint/no-unused-vars
+  const [totalMessageCount, setTotalMessageCount] = useState(initialTotalCount); // eslint-disable-line @typescript-eslint/no-unused-vars
   const [page, setPage] = useState(1);
+  const pageRef = useRef(1); // ref로도 관리하여 최신 값 보장
   const limit = 10; // 한 번에 로드할 메시지 수
 
   // 대화 ID 가져오기
@@ -149,7 +156,9 @@ export function useChatBot(options?: ChatBotOptions) {
           setIsLoading(true);
         }
 
-        const pageToLoad = loadMore ? page + 1 : 1;
+        // ref에서 최신 page 값 가져오기
+        const currentPage = pageRef.current;
+        const pageToLoad = loadMore ? currentPage + 1 : 1;
         const response = await fetch(
           `/api/conversations/${conversationId}/messages?limit=${limit}&page=${pageToLoad}`
         );
@@ -179,14 +188,18 @@ export function useChatBot(options?: ChatBotOptions) {
             return [...uniqueNewMessages, ...prevMessages];
           });
           setPage(pageToLoad);
+          pageRef.current = pageToLoad;
         } else {
           // 첫 번째 페이지인 경우 메시지 교체
           setMessages(newMessages);
           setPage(1);
+          pageRef.current = 1;
         }
 
         // 더 불러올 메시지가 있는지 체크
-        setHasMore(data.hasMore);
+        // API에서 반환한 hasMore를 그대로 사용하되, 메시지가 없으면 false
+        const hasMoreMessages = newMessages.length > 0 && data.hasMore;
+        setHasMore(hasMoreMessages);
         setTotalMessageCount(data.totalCount);
 
         // 서브그래프 및 거래 액션 데이터 설정 (첫 로드 시에만)
@@ -220,7 +233,7 @@ export function useChatBot(options?: ChatBotOptions) {
         }
       }
     },
-    [page, limit]
+    [limit]
   );
 
   // 더 많은 메시지 로드 핸들러
@@ -230,8 +243,34 @@ export function useChatBot(options?: ChatBotOptions) {
     }
   }, [isLoadingMore, hasMore, currentConversationId, loadMessages]);
 
-  // 초기 채팅 기록 로드
+  // 초기 메시지에서 서브그래프 및 거래 액션 데이터 설정
   useEffect(() => {
+    if (initialMessages.length > 0) {
+      // 마지막 서브그래프 데이터가 있으면 설정
+      const lastSubgraphMsg = [...initialMessages].find((msg) => msg.subgraph);
+      if (lastSubgraphMsg?.subgraph) {
+        setSubgraphData(lastSubgraphMsg.subgraph);
+      }
+
+      // 마지막 거래 액션 데이터가 있으면 설정
+      const lastTradingActionMsg = [...initialMessages].find(
+        (msg) => msg.trading_action
+      );
+      if (lastTradingActionMsg?.trading_action) {
+        setTradingAction(lastTradingActionMsg.trading_action);
+      }
+    }
+  }, []); // 초기 마운트 시 한 번만 실행
+
+  // 초기 채팅 기록 로드 (initialMessages가 없을 때만)
+  useEffect(() => {
+    // initialMessages가 있으면 서버에서 이미 불러왔으므로 건너뛰기
+    if (initialMessages.length > 0) {
+      return;
+    }
+
+    let isMounted = true; // 컴포넌트가 마운트되어 있는지 추적
+
     const fetchInitialChat = async () => {
       if (!user) return; // user가 없으면 실행하지 않음
 
@@ -241,10 +280,12 @@ export function useChatBot(options?: ChatBotOptions) {
         // conversationId 설정
         if (initialConversationId) {
           // 외부에서 전달받은 conversationId가 있는 경우 우선 사용
+          if (!isMounted) return;
           setCurrentConversationId(initialConversationId);
 
           // 초기 메시지 로드
           await loadMessages(initialConversationId);
+          if (!isMounted) return;
 
           // 대화 제목 가져오기
           const conversationResponse = await fetch(
@@ -255,7 +296,7 @@ export function useChatBot(options?: ChatBotOptions) {
             const currentConversation = allConversations.find(
               (conv: ConversationInfo) => conv.id === initialConversationId
             );
-            if (currentConversation) {
+            if (currentConversation && isMounted) {
               setCurrentChatTitle(currentConversation.title || "대화");
             }
           }
@@ -263,12 +304,14 @@ export function useChatBot(options?: ChatBotOptions) {
           // 외부에서 전달받은 conversationId가 없는 경우 localStorage 확인
           const storedId = localStorage.getItem("currentConversationId");
           if (storedId) {
+            if (!isMounted) return;
             setCurrentConversationId(storedId);
 
             // 직접적으로 대화 목록 페이지에 접근했다면 대화 내용은 로드하지 않음
             if (initialShowChatList === false) {
               // 초기 메시지 로드
               await loadMessages(storedId);
+              if (!isMounted) return;
 
               // 대화 제목 가져오기
               const conversationResponse = await fetch(
@@ -279,7 +322,7 @@ export function useChatBot(options?: ChatBotOptions) {
                 const currentConversation = allConversations.find(
                   (conv: ConversationInfo) => conv.id === storedId
                 );
-                if (currentConversation) {
+                if (currentConversation && isMounted) {
                   setCurrentChatTitle(currentConversation.title || "대화");
                 }
               }
@@ -289,7 +332,9 @@ export function useChatBot(options?: ChatBotOptions) {
       } catch (error) {
         console.error("채팅 기록 로드 중 오류 발생:", error);
       } finally {
-        setIsLoading(false);
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     };
 
@@ -297,7 +342,11 @@ export function useChatBot(options?: ChatBotOptions) {
       fetchInitialChat();
       // loadConversations는 React Query가 자동으로 처리
     }
-  }, [initialConversationId, initialShowChatList, loadMessages, user]);
+
+    return () => {
+      isMounted = false; // 컴포넌트 언마운트 시 플래그 설정
+    };
+  }, [initialConversationId, initialShowChatList, user, initialMessages.length, loadMessages]); // loadMessages를 의존성에 추가
 
   // 피드백 처리 함수
   const handleFeedback = useCallback(
@@ -346,8 +395,9 @@ export function useChatBot(options?: ChatBotOptions) {
         });
 
         // API 호출을 위한 대기 메시지
+        const feedbackStreamingMessageId = `streaming-feedback-${Date.now().toString()}`;
         const waitingMessage: Message = {
-          id: `waiting-feedback-${Date.now().toString()}`,
+          id: feedbackStreamingMessageId,
           role: "assistant",
           content: "피드백 처리 중...",
           timestamp: new Date(),
@@ -359,9 +409,15 @@ export function useChatBot(options?: ChatBotOptions) {
           feedback,
           user!.id,
           (chunkText: string) => {
-            setStreamingMessage((prev) => {
-              if (!prev) return null;
-              return { ...prev, content: chunkText };
+            // 실시간으로 스트리밍 메시지 업데이트 - 각 토큰마다 즉시 렌더링
+            // flushSync로 React 배치 업데이트를 우회하여 즉시 화면에 반영
+            flushSync(() => {
+              setStreamingMessage({
+                id: feedbackStreamingMessageId,
+                role: "assistant",
+                content: chunkText,
+                timestamp: new Date(),
+              });
             });
           },
           (finalMessage: Message) => {
@@ -412,8 +468,10 @@ export function useChatBot(options?: ChatBotOptions) {
       setIsLoading(true);
       setLastQuestionSentToAPI(content); // Store the original user question for feedback context
 
+      // 스트리밍 메시지 ID를 고정하여 실시간 업데이트가 부드럽게 작동하도록 함
+      const streamingMessageId = `streaming-${Date.now().toString()}`;
       const waitingMessage: Message = {
-        id: `waiting-${Date.now().toString()}`,
+        id: streamingMessageId,
         role: "assistant",
         content: "응답 생성 중...",
         timestamp: new Date(),
@@ -425,9 +483,16 @@ export function useChatBot(options?: ChatBotOptions) {
           content,
           user!.id,
           (chunkText: string) => {
-            setStreamingMessage((prev) => {
-              if (!prev) return null;
-              return { ...prev, content: chunkText };
+            // 실시간으로 스트리밍 메시지 업데이트 - 각 토큰마다 즉시 렌더링
+            // flushSync로 React 배치 업데이트를 우회하여 즉시 화면에 반영
+            console.log("chunkText", chunkText);
+            flushSync(() => {
+              setStreamingMessage({
+                id: streamingMessageId,
+                role: "assistant",
+                content: chunkText,
+                timestamp: new Date(),
+              });
             });
           },
           (finalMessage: Message) => {

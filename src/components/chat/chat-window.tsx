@@ -11,6 +11,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { ChatInput } from "./chat-input";
 import { ChatMessageList } from "./chat-message-list";
+import { Message } from "./types";
 import { useChatBot } from "./use-chat";
 
 // 대화 목록 컴포넌트
@@ -175,11 +176,17 @@ const ConversationList = ({
 interface ChatWindowProps {
   conversationId?: string;
   showChatList?: boolean;
+  initialMessages?: Message[];
+  initialHasMore?: boolean;
+  initialTotalCount?: number;
 }
 
 export default function ChatWindow({
   conversationId,
   showChatList: initialShowChatList,
+  initialMessages,
+  initialHasMore,
+  initialTotalCount,
 }: ChatWindowProps) {
   const {
     messages,
@@ -197,7 +204,13 @@ export default function ChatWindow({
     loadMore,
     renameConversation,
     deleteConversation,
-  } = useChatBot({ conversationId, showChatList: initialShowChatList });
+  } = useChatBot({ 
+    conversationId, 
+    showChatList: initialShowChatList,
+    initialMessages,
+    initialHasMore,
+    initialTotalCount,
+  });
   const { user } = useUser();
 
   // 주식 정보나 메시지가 있는지 확인

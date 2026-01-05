@@ -30,26 +30,34 @@ export async function GET(
     // 기존 getMessages 함수 호출
     const messages = await getMessages(conversationId);
 
-    // 메시지 정렬: 최신 메시지가 아래에 오도록 정렬 (날짜 오름차순)
-    // 이렇게 하면 인피니티 스크롤로 과거 메시지를 로드할 때 위쪽에 메시지가 추가됨
+    // 메시지 정렬: 최신 메시지가 먼저 오도록 정렬 (날짜 내림차순)
     const sortedMessages = [...messages].sort((a, b) => {
       const dateA = new Date(a.timestamp);
       const dateB = new Date(b.timestamp);
-      return dateA.getTime() - dateB.getTime(); // 오래된 메시지가 먼저 오도록 정렬
+      return dateB.getTime() - dateA.getTime(); // 최신 메시지가 먼저 오도록 정렬
     });
 
-    // 페이지에 따라 메시지 가져오기 (오래된 메시지가 먼저 오도록)
+    // 페이지에 따라 메시지 가져오기 (최신 메시지부터)
+    // page=1: 최신 메시지 10개
+    // page=2: 그 다음 10개 (더 오래된 메시지)
     const startIndex = (page - 1) * limit;
     const limitedMessages = sortedMessages.slice(
       startIndex,
       startIndex + limit
     );
 
+    // 반환할 때는 오름차순으로 정렬 (오래된 메시지가 먼저 오도록)
+    // 이렇게 하면 클라이언트에서 위로 스크롤할 때 더 오래된 메시지를 위에 추가할 수 있음
+    const reversedMessages = [...limitedMessages].reverse();
+
+    // 더 가져올 메시지가 있는지 확인
+    // startIndex + limit이 전체 메시지 개수보다 작으면 더 가져올 메시지가 있음
+    const hasMore = startIndex + limit < sortedMessages.length;
+
     return NextResponse.json({
-      messages: limitedMessages,
-      // 더 가져올 메시지가 있는지 확인
-      hasMore: startIndex + limit < messages.length,
-      totalCount: messages.length,
+      messages: reversedMessages, // 오름차순으로 반환 (오래된 메시지가 먼저)
+      hasMore,
+      totalCount: sortedMessages.length,
     });
   } catch (error) {
     console.error("API 라우트에서 메시지 목록 조회 오류:", error);

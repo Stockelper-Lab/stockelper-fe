@@ -4,9 +4,54 @@ import { Message, Subgraph, TradingAction } from "./types";
 // 현재 활성화된 대화 ID를 저장하는 변수
 let currentConversationId: string | null = null;
 
+/**
+ * 스트리밍 텍스트에 포맷팅을 적용하는 함수
+ * LLM API에서 delta 토큰이 공백 없이 전송될 때 가독성을 위해 포맷팅 적용
+ */
+function formatStreamingText(text: string): string {
+  let formatted = text;
+  
+  // 마침표, 느낌표, 물음표 뒤에 공백이 없으면 줄바꿈 추가 (문장 끝)
+  // 단, 이미 줄바꿈이 있거나 숫자/괄호가 바로 오는 경우 제외
+  formatted = formatted.replace(/([.!?])(?=[가-힣a-zA-Z\-"'])/g, "$1 ");
+  
+  // 쉼표 뒤에 공백이 없으면 공백 추가
+  formatted = formatted.replace(/,(?=[가-힣a-zA-Z])/g, ", ");
+  
+  // 콜론 뒤에 공백이 없으면 공백 추가 (단, 시간 표기 제외)
+  formatted = formatted.replace(/:(?=[가-힣a-zA-Z"'])/g, ": ");
+  
+  // 하이픈으로 시작하는 목록 항목 앞에 줄바꿈 추가
+  // 연속된 하이픈 목록을 인식하여 줄바꿈 처리
+  formatted = formatted.replace(/([^-\n])-(?=[가-힣a-zA-Z"'])/g, "$1\n- ");
+  
+  // 첫 번째 하이픈 목록 항목 처리 (문장 끝 뒤에 오는 경우)
+  formatted = formatted.replace(/([.!?]) - /g, "$1\n- ");
+  
+  // 중복 공백 제거
+  formatted = formatted.replace(/  +/g, " ");
+  
+  // 중복 줄바꿈 정리
+  formatted = formatted.replace(/\n\n\n+/g, "\n\n");
+  
+  return formatted;
+}
+
 // API 응답 타입 정의
 interface ApiResponse {
   message: string;
+  subgraph?: Subgraph;
+  trading_action?: TradingAction | null;
+  error?: string | null;
+}
+
+// SSE 이벤트 타입 정의
+interface SSEEvent {
+  type: "progress" | "delta" | "final";
+  token?: string;
+  message?: string;
+  step?: string;
+  status?: string;
   subgraph?: Subgraph;
   trading_action?: TradingAction | null;
   error?: string | null;
@@ -130,76 +175,116 @@ async function processStream(
   while (true) {
     const { done, value } = await reader.read();
     if (done) {
-      if (buffer.trim()) {
-        try {
-          const data = JSON.parse(buffer) as ApiResponse;
-          responseText = data.message;
-          lastMessage = {
-            id: uuidv4(),
-            role: "assistant",
-            content: data.message,
-            timestamp: new Date(),
-            ...(data.subgraph && { subgraph: data.subgraph }),
-            ...(data.trading_action && {
-              trading_action: data.trading_action,
-            }),
-            ...(data.error && { error: data.error }),
-          };
-          if (onChunkReceived) {
-            onChunkReceived(responseText);
-          }
-        } catch (error) {
-          console.error("스트림 마지막 청크 파싱 오류:", buffer, error);
-        }
-      }
       break;
     }
     buffer += decoder.decode(value, { stream: true });
     const lines = buffer.split("\n");
     buffer = lines.pop() || "";
 
+    // 각 라인을 순차적으로 처리
     for (const line of lines) {
-      if (line.trim() === "") continue;
-      try {
-        const data = JSON.parse(line) as ApiResponse;
-        const newChunk = data.message.slice(responseText.length);
-        if (onChunkReceived && newChunk) {
-          onChunkReceived(newChunk);
-        }
-        responseText = data.message;
+      const trimmedLine = line.trim();
+      if (trimmedLine === "" || trimmedLine === "[DONE]") continue;
 
-        lastMessage = {
-          id: uuidv4(),
-          role: "assistant",
-          content: data.message,
-          timestamp: new Date(),
-          ...(data.subgraph && { subgraph: data.subgraph }),
-          ...(data.trading_action && { trading_action: data.trading_action }),
-          ...(data.error && { error: data.error }),
-        };
+      // SSE 형식 파싱: "data: {...}" 형식 처리
+      let jsonStr = trimmedLine;
+      if (trimmedLine.startsWith("data: ")) {
+        jsonStr = trimmedLine.substring(6); // "data: " 제거
+      }
+      
+      // [DONE] 마커 처리 (data: [DONE] 형식으로 올 수 있음)
+      if (jsonStr === "[DONE]") continue;
+
+      try {
+        const event = JSON.parse(jsonStr) as SSEEvent;
+
+        // progress 이벤트는 무시 (로깅만)
+        if (event.type === "progress") {
+          continue;
+        }
+
+        // delta 이벤트: 토큰을 누적하여 메시지 생성
+        if (event.type === "delta" && event.token !== undefined) {
+          // 토큰 값을 그대로 누적
+          responseText += event.token;
+          
+          // 실시간으로 누적된 텍스트 전달 - 각 토큰마다 즉시 호출
+          if (onChunkReceived) {
+            // 스트리밍 중에도 포맷팅을 적용하여 전달
+            const formattedText = formatStreamingText(responseText);
+            onChunkReceived(formattedText);
+            // 각 토큰마다 약간의 지연을 주어 UI가 업데이트될 시간을 확보
+            await new Promise(resolve => setTimeout(resolve, 0));
+          }
+
+          // 임시 메시지 업데이트
+          lastMessage = {
+            id: uuidv4(),
+            role: "assistant",
+            content: responseText,
+            timestamp: new Date(),
+          };
+        }
+
+        // final 이벤트: 최종 메시지 수신
+        if (event.type === "final" && event.message) {
+          responseText = event.message;
+          
+          lastMessage = {
+            id: uuidv4(),
+            role: "assistant",
+            content: event.message,
+            timestamp: new Date(),
+            ...(event.subgraph && { subgraph: event.subgraph }),
+            ...(event.trading_action && {
+              trading_action: event.trading_action,
+            }),
+            ...(event.error && { error: event.error }),
+          };
+
+          // 최종 메시지 전달
+          if (onChunkReceived) {
+            onChunkReceived(responseText);
+          }
+        }
       } catch (error) {
-        console.error("스트림 청크 파싱 오류:", line, error);
+        // JSON 파싱 실패 시 무시 (빈 줄이나 잘못된 형식일 수 있음)
+        if (trimmedLine !== "" && !trimmedLine.startsWith(":")) {
+          console.warn("스트림 청크 파싱 경고:", trimmedLine, error);
+        }
       }
     }
   }
 
+  // delta 이벤트만 받고 final 이벤트를 받지 못한 경우 처리
   if (!lastMessage) {
     throw new Error("스트림에서 메시지를 수신하지 못했습니다.");
   }
+  if (lastMessage.content === "" && responseText === "") {
+    throw new Error("스트림에서 메시지를 수신하지 못했습니다.");
+  }
 
-  await saveMessageToAPI(conversationId, lastMessage);
+  // 타입 가드: lastMessage가 null이 아님을 보장
+  const finalMessage: Message = lastMessage;
+
+  // final 이벤트를 받지 못한 경우 delta로 누적된 메시지 사용
+  if (!finalMessage.subgraph && !finalMessage.trading_action) {
+    finalMessage.content = responseText;
+  }
+
+  await saveMessageToAPI(conversationId, finalMessage);
 
   if (
-    lastMessage.trading_action &&
-    isValidTradingAction(lastMessage.trading_action)
+    finalMessage.trading_action &&
+    isValidTradingAction(finalMessage.trading_action)
   ) {
     const questionMessage: Message = {
       id: uuidv4(),
       role: "question",
       content: `이 분석 결과에 따라 ${
-        lastMessage.trading_action.stock_code || "해당 종목"
-      } ${lastMessage.trading_action.order_quantity || ""}주를 ${
-        lastMessage.trading_action.order_side === "buy" ? "매수" : "매도"
+        finalMessage.trading_action.stock_code || "해당 종목"
+      } ${finalMessage.trading_action.order_quantity || ""}주를 ${
+        finalMessage.trading_action.order_side === "buy" ? "매수" : "매도"
       }하시겠습니까?`,
       timestamp: new Date(),
       feedbackResponse: null,
@@ -207,14 +292,14 @@ async function processStream(
     await saveMessageToAPI(conversationId, questionMessage);
 
     if (onResponseComplete) {
-      onResponseComplete(lastMessage);
+      onResponseComplete(finalMessage);
       setTimeout(() => onResponseComplete(questionMessage), 100);
     }
   } else if (onResponseComplete) {
-    onResponseComplete(lastMessage);
+    onResponseComplete(finalMessage);
   }
 
-  return lastMessage;
+  return finalMessage;
 }
 
 async function handleApiCall(

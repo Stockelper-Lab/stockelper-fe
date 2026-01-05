@@ -2,7 +2,7 @@
 
 import ReactMarkdown from "react-markdown";
 import rehypeRaw from "rehype-raw";
-import rehypeSanitize from "rehype-sanitize";
+import remarkBreaks from "remark-breaks";
 import remarkGfm from "remark-gfm";
 
 interface MarkdownRendererProps {
@@ -10,11 +10,15 @@ interface MarkdownRendererProps {
 }
 
 export function MarkdownRenderer({ content }: MarkdownRendererProps) {
+  // content가 변경될 때마다 ReactMarkdown이 완전히 리렌더링되도록 key 사용
+  const contentKey = `${content.length}-${content.slice(-10)}`;
+
   return (
     <div className="prose dark:prose-invert prose-zinc max-w-none">
       <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
-        rehypePlugins={[rehypeRaw, rehypeSanitize]}
+        key={contentKey}
+        remarkPlugins={[remarkGfm, remarkBreaks]}
+        rehypePlugins={[rehypeRaw]}
         components={{
           h1: ({ children }) => (
             <h1 className="text-2xl font-bold mt-6 mb-4">{children}</h1>
@@ -38,7 +42,14 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
               {children}
             </a>
           ),
-          code: ({ className, children, inline }) => {
+          // strong (볼드체) 명시적 정의
+          strong: ({ children }) => (
+            <strong className="font-bold">{children}</strong>
+          ),
+          // em (이탤릭체) 명시적 정의
+          em: ({ children }) => <em className="italic">{children}</em>,
+          code: ({ className, children, ...props }) => {
+            const inline = "inline" in props && props.inline;
             if (inline) {
               return (
                 <code className="bg-zinc-100 dark:bg-zinc-800 rounded px-1 py-0.5 text-sm">
