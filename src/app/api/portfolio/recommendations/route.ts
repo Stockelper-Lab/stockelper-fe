@@ -2,7 +2,7 @@ import { validateSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 
-// 포트폴리오 추천 API 호출 및 저장
+// 포트폴리오 추천 API 호출 (백엔드 서버가 DB row를 생성함)
 export async function POST(req: NextRequest) {
   try {
     // 세션에서 userId 가져오기
@@ -26,21 +26,17 @@ export async function POST(req: NextRequest) {
 
     const userIdNum = parseInt(userId, 10);
 
-    // 요청 본문에서 job_id 가져오기 (선택 사항)
-    const body = await req.json().catch(() => ({}));
-    const jobId = body.job_id || null;
-
     // 환경 변수에서 포트폴리오 서버 엔드포인트 가져오기
     const PORTFOLIO_ENDPOINT = process.env.PORTFOLIO_ENDPOINT || "http://220.86.116.160:21008";
     
-    // 포트폴리오 추천 API 호출
+    // 포트폴리오 추천 API 호출 (백엔드 서버가 DB row를 생성함)
     const portfolioResponse = await fetch(`${PORTFOLIO_ENDPOINT}/portfolio/recommendations`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        user_id: userIdNum,
+        user_id: 4,
       }),
     });
 
@@ -53,26 +49,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // 백엔드 서버가 DB row를 생성하고 반환한 데이터를 그대로 반환
     const data = await portfolioResponse.json();
-
-    // 데이터베이스에 저장
-    const saved = await prisma.portfolioRecommendation.create({
-      data: {
-        userId: userIdNum,
-        jobId: jobId,
-        investorType: data.investor_type,
-        result: data.result,
-      },
-    });
-
-    // 저장된 데이터 반환
-    return NextResponse.json({
-      id: saved.id,
-      job_id: saved.jobId,
-      investor_type: saved.investorType,
-      result: saved.result,
-      created_at: saved.createdAt,
-    });
+    return NextResponse.json(data);
   } catch (error) {
     console.error("포트폴리오 추천 API 라우트 오류:", error);
     return NextResponse.json(

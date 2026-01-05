@@ -13,7 +13,7 @@ export interface PortfolioRecommendationHistory {
   userId: number;
   jobId?: string | null;
   investorType: string;
-  result: string;
+  result: string; // 빈 문자열이면 동작 중 상태
   createdAt: string;
 }
 

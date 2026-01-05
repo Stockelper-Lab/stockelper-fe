@@ -11,7 +11,7 @@ import { MarkdownRenderer } from "@/components/chat/markdown-renderer";
 import { useParams, useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
-import { ArrowLeft, TrendingUp, User } from "lucide-react";
+import { ArrowLeft, Loader2, TrendingUp, User } from "lucide-react";
 import { useEffect, useState } from "react";
 
 export default function PortfolioDetailPage() {
@@ -123,6 +123,7 @@ export default function PortfolioDetailPage() {
     "yyyy년 MM월 dd일 HH:mm",
     { locale: ko }
   );
+  const isProcessing = !portfolio.result || portfolio.result.trim() === "";
 
   return (
     <div className="h-full flex flex-col">
@@ -137,7 +138,11 @@ export default function PortfolioDetailPage() {
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg shadow-amber-500/20">
-          <TrendingUp className="w-5 h-5 text-white" />
+          {isProcessing ? (
+            <Loader2 className="w-5 h-5 text-white animate-spin" />
+          ) : (
+            <TrendingUp className="w-5 h-5 text-white" />
+          )}
         </div>
         <div>
           <h1 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
@@ -165,12 +170,28 @@ export default function PortfolioDetailPage() {
             </div>
           </div>
 
-          {/* 마크다운 결과 */}
-          <div className="p-6 rounded-xl bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
-            <div className="prose prose-zinc dark:prose-invert max-w-none">
-              <MarkdownRenderer content={portfolio.result} />
+          {/* 결과 영역 */}
+          {isProcessing ? (
+            <div className="p-6 rounded-xl bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
+              <div className="flex flex-col items-center justify-center py-12">
+                <Loader2 className="w-12 h-12 text-amber-600 dark:text-amber-400 animate-spin mb-4" />
+                <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
+                  분석 중입니다
+                </h3>
+                <p className="text-sm text-zinc-500 dark:text-zinc-400 text-center max-w-sm">
+                  포트폴리오 추천을 생성하고 있습니다.
+                  <br />
+                  잠시만 기다려주세요.
+                </p>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="p-6 rounded-xl bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
+              <div className="prose prose-zinc dark:prose-invert max-w-none">
+                <MarkdownRenderer content={portfolio.result} />
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

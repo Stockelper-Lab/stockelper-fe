@@ -69,7 +69,7 @@ export default function PortfolioPage() {
     }
   }, [user, userLoading]);
 
-  // 새 추천 요청
+  // 새 추천 요청 (2개 병렬 처리)
   const handleRequestRecommendation = useCallback(async () => {
     if (!user) return;
 
@@ -77,10 +77,14 @@ export default function PortfolioPage() {
     setError(null);
 
     try {
-      const recommendation = await requestPortfolioRecommendation(user.id);
+      // 2개의 요청을 병렬로 처리
+      const [recommendation1, recommendation2] = await Promise.all([
+        requestPortfolioRecommendation(user.id),
+        requestPortfolioRecommendation(user.id),
+      ]);
       
-      // 새로 생성된 추천 상세 페이지로 이동
-      router.push(`/portfolio/${recommendation.id}`);
+      // 첫 번째 추천 상세 페이지로 이동
+      router.push(`/portfolio/${recommendation1.id}`);
     } catch (err) {
       console.error("포트폴리오 추천 요청 실패:", err);
       setError(
@@ -188,16 +192,24 @@ export default function PortfolioPage() {
                 "yyyy년 MM월 dd일 HH:mm",
                 { locale: ko }
               );
+              const isProcessing = !portfolio.result || portfolio.result.trim() === "";
 
               return (
                 <Link key={portfolio.id} href={`/portfolio/${portfolio.id}`}>
                   <div className="group flex items-center gap-4 p-4 rounded-xl bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 hover:border-indigo-300 dark:hover:border-indigo-700 hover:shadow-lg transition-all cursor-pointer">
                     {/* 아이콘 */}
                     <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-amber-100 to-orange-100 dark:from-amber-900/50 dark:to-orange-900/50 flex items-center justify-center flex-shrink-0">
-                      <TrendingUp
-                        size={22}
-                        className="text-amber-600 dark:text-amber-400"
-                      />
+                      {isProcessing ? (
+                        <Loader2
+                          size={22}
+                          className="text-amber-600 dark:text-amber-400 animate-spin"
+                        />
+                      ) : (
+                        <TrendingUp
+                          size={22}
+                          className="text-amber-600 dark:text-amber-400"
+                        />
+                      )}
                     </div>
 
                     {/* 내용 */}
@@ -208,9 +220,16 @@ export default function PortfolioPage() {
                       <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
                         {dateStr}
                       </p>
-                      <p className="text-xs text-indigo-600 dark:text-indigo-400 mt-1">
-                        {portfolio.investorType}
-                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <p className="text-xs text-indigo-600 dark:text-indigo-400">
+                          {portfolio.investorType}
+                        </p>
+                        {isProcessing && (
+                          <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">
+                            • 분석 중
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     {/* 화살표 */}
