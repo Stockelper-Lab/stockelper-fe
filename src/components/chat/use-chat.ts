@@ -3,8 +3,13 @@ import {
   createConversation,
   deleteConversation,
   fetchConversations,
-  updateConversationTitle
+  generateConversationTitle,
+  updateConversationTitle,
 } from "@/lib/api/conversations";
+import {
+  extractRealConversationId,
+  generateTempConversationId,
+} from "@/lib/api/temp-conversation";
 import { ConversationInfo } from "@/lib/chat-service";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -96,6 +101,8 @@ export function useChatBot(options?: ChatBotOptions) {
     initialShowChatList !== undefined ? initialShowChatList : true
   );
   const [currentChatTitle, setCurrentChatTitle] = useState<string>("새 대화");
+  const [isTitleTyping, setIsTitleTyping] = useState(false); // 제목 타이핑 애니메이션 상태
+  const [isFirstMessage, setIsFirstMessage] = useState(true); // 첫 메시지 여부
   const { user } = useUser();
   const queryClient = useQueryClient();
 
@@ -104,7 +111,7 @@ export function useChatBot(options?: ChatBotOptions) {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   // 전체 메시지 카운트 (현재는 사용되지 않지만, 향후 UI에 표시할 수 있음)
   const [totalMessageCount, setTotalMessageCount] = useState(initialTotalCount); // eslint-disable-line @typescript-eslint/no-unused-vars
-  const [page, setPage] = useState(1);
+  const [, setPage] = useState(1); // page는 ref로 관리하므로 setter만 사용
   const pageRef = useRef(1); // ref로도 관리하여 최신 값 보장
   const limit = 10; // 한 번에 로드할 메시지 수
 
@@ -141,10 +148,9 @@ export function useChatBot(options?: ChatBotOptions) {
     }
   }, [conversationsData]);
 
-  // 대화 목록 로드 함수 (기존 API 유지)
-  const loadConversations = useCallback(async () => {
-    await refetchConversations();
-  }, [refetchConversations]);
+  // 대화 목록 로드 함수 - refetchConversations를 통해 React Query가 자동 처리
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const loadConversations = refetchConversations;
 
   // 대화 내용 로드 함수 - 페이지네이션 적용
   const loadMessages = useCallback(
@@ -260,12 +266,14 @@ export function useChatBot(options?: ChatBotOptions) {
         setTradingAction(lastTradingActionMsg.trading_action);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // 초기 마운트 시 한 번만 실행
 
   // 초기 채팅 기록 로드 (initialMessages가 없을 때만)
   useEffect(() => {
     // initialMessages가 있으면 서버에서 이미 불러왔으므로 건너뛰기
     if (initialMessages.length > 0) {
+      setIsFirstMessage(false); // 기존 메시지가 있으면 첫 메시지가 아님
       return;
     }
 
@@ -456,6 +464,42 @@ export function useChatBot(options?: ChatBotOptions) {
   const sendMessage = useCallback(
     async (content: string) => {
       if (!content.trim()) return;
+      if (!user?.id) return;
+
+      const conversationId = currentConversationId;
+      if (!conversationId) return;
+
+      // 첫 메시지인지 확인 (로컬 스토리지 또는 상태)
+      const isNew =
+        isFirstMessage ||
+        (typeof window !== "undefined" &&
+          localStorage.getItem("isNewConversation") === "true");
+
+      // 첫 메시지일 경우: DB에 대화방 등록
+      if (isNew) {
+        try {
+          await createConversation(user.id, conversationId, "새 대화");
+
+          // 새 대화 플래그 제거
+          if (typeof window !== "undefined") {
+            localStorage.removeItem("isNewConversation");
+          }
+          setIsFirstMessage(false);
+
+          // 대화 목록 캐시 무효화
+          queryClient.invalidateQueries({
+            queryKey: ["conversations", user.id],
+          });
+        } catch (error) {
+          // 이미 존재하는 대화방이면 (409 Conflict) 무시
+          if (
+            error instanceof Error &&
+            !error.message.includes("409")
+          ) {
+            console.error("대화방 생성 실패:", error);
+          }
+        }
+      }
 
       // 사용자 메시지는 API에서 저장하므로 여기서는 UI에만 추가
       const userMessage: Message = {
@@ -478,14 +522,45 @@ export function useChatBot(options?: ChatBotOptions) {
       };
       setStreamingMessage(waitingMessage);
 
+      // 첫 메시지인 경우 제목 생성 (비동기로 진행)
+      if (isNew) {
+        setIsTitleTyping(true);
+        generateConversationTitle(
+          conversationId,
+          content,
+          (token: string) => {
+            // 토큰별로 제목 업데이트 (타이핑 효과)
+            setCurrentChatTitle((prev) =>
+              prev === "새 대화" ? token : prev + token
+            );
+          },
+          (finalTitle: string) => {
+            // 최종 제목 설정
+            setCurrentChatTitle(finalTitle);
+            setIsTitleTyping(false);
+
+            // 대화 목록 캐시 무효화
+            queryClient.invalidateQueries({
+              queryKey: ["conversations", user.id],
+            });
+          }
+        ).catch((error) => {
+          console.error("제목 생성 실패:", error);
+          setIsTitleTyping(false);
+          // fallback: 첫 메시지로 제목 설정
+          const fallbackTitle =
+            content.length > 30 ? content.substring(0, 30) + "..." : content;
+          setCurrentChatTitle(fallbackTitle);
+        });
+      }
+
       try {
         await apiSendMessage(
           content,
-          user!.id,
+          user.id,
           (chunkText: string) => {
             // 실시간으로 스트리밍 메시지 업데이트 - 각 토큰마다 즉시 렌더링
             // flushSync로 React 배치 업데이트를 우회하여 즉시 화면에 반영
-            console.log("chunkText", chunkText);
             flushSync(() => {
               setStreamingMessage({
                 id: streamingMessageId,
@@ -545,48 +620,36 @@ export function useChatBot(options?: ChatBotOptions) {
         setIsLoading(false);
       }
     },
-    [user] // messages는 디펜던시로 필요하지 않음
+    [user, currentConversationId, isFirstMessage, queryClient]
   );
 
-  // 새 대화 생성 mutation
-  const createConversationMutation = useMutation({
-    mutationFn: (userId: number) => createConversation(userId),
-    onSuccess: (newConversation) => {
-      // 대화 목록 캐시 무효화 및 리프레시
-      queryClient.invalidateQueries({ queryKey: ["conversations", user?.id] });
+  // 새 대화 시작하기 - DB에 저장하지 않고 임시 ID만 발급
+  const startNewConversation = useCallback(
+    async () => {
+      // 임시 대화 ID 생성 (DB 저장 안함)
+      const tempId = generateTempConversationId();
+      const realId = extractRealConversationId(tempId);
 
-      // 상태 업데이트
-      setCurrentConversationId(newConversation.id);
-      setCurrentChatTitle(newConversation.title || "새 대화");
+      // 상태 초기화
+      setCurrentConversationId(realId);
+      setCurrentChatTitle("새 대화");
       setMessages([]);
       setSubgraphData(null);
       setTradingAction(null);
+      setIsFirstMessage(true);
 
-      // 로컬 스토리지에 대화 ID 저장
+      // 로컬 스토리지에 임시 대화 ID 저장
       if (typeof window !== "undefined") {
-        localStorage.setItem("currentConversationId", newConversation.id);
+        localStorage.setItem("currentConversationId", realId);
+        localStorage.setItem("isNewConversation", "true"); // 새 대화 표시
       }
 
       // 페이지 이동
-      window.location.href = `/chat/${newConversation.id}`;
-    },
-  });
+      window.location.href = `/chat/${realId}`;
 
-  // 새 대화 시작하기
-  const startNewConversation = useCallback(
-    async (userId: number) => {
-      try {
-        setIsLoading(true);
-        await createConversationMutation.mutateAsync(userId);
-        return createConversationMutation.data?.id ?? null;
-      } catch (error) {
-        console.error("새 대화 생성 중 오류 발생:", error);
-        return null;
-      } finally {
-        setIsLoading(false);
-      }
+      return realId;
     },
-    [createConversationMutation]
+    []
   );
 
   // 특정 대화 선택하기 (이제는 직접 이동만 처리)
@@ -639,7 +702,7 @@ export function useChatBot(options?: ChatBotOptions) {
         setIsLoading(false);
       }
     },
-    [currentConversationId, updateConversationTitleMutation]
+    [updateConversationTitleMutation]
   );
 
   // 대화방 삭제 mutation
@@ -686,6 +749,7 @@ export function useChatBot(options?: ChatBotOptions) {
     showChatList,
     conversations,
     currentChatTitle,
+    isTitleTyping,
     startNewConversation,
     selectConversation,
     backToConversationList,

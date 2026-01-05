@@ -5,10 +5,10 @@ import { NextRequest, NextResponse } from "next/server";
 // 대화 정보 가져오기
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const conversationId = params.id;
+    const { id: conversationId } = await params;
     const messages = await getMessages(conversationId);
 
     return NextResponse.json(messages);
@@ -24,10 +24,10 @@ export async function GET(
 // 대화방 이름 변경
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const conversationId = params.id;
+    const { id: conversationId } = await params;
     const { title } = await request.json();
 
     // 대화방 이름 업데이트
@@ -49,10 +49,10 @@ export async function PATCH(
 // 대화방 삭제
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const conversationId = params.id;
+    const { id: conversationId } = await params;
     await deleteConversation(conversationId);
 
     return NextResponse.json({ success: true });

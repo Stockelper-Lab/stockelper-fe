@@ -1,178 +1,18 @@
 "use client";
 
-import { StockChart } from "@/components/chat/stock-chart";
 import { Button } from "@/components/ui/button";
-import { useUser } from "@/hooks/use-user";
-import { ConversationInfo } from "@/lib/chat-service";
-import { formatDistanceToNow } from "date-fns";
-import { ko } from "date-fns/locale";
-import { ArrowLeft, Edit2, Plus, Trash2 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
+import { ArrowLeft, Edit2, Network, PanelRightClose, PanelRightOpen, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { ChatInput } from "./chat-input";
 import { ChatMessageList } from "./chat-message-list";
+import { ConversationList } from "./conversation-list";
+import { StockChart } from "./stock-chart";
 import { Message } from "./types";
+import { TypingTitle } from "./typing-title";
 import { useChatBot } from "./use-chat";
-
-// 대화 목록 컴포넌트
-const ConversationList = ({
-  conversations,
-  isLoading,
-  onNewChat,
-  onRename,
-  onDelete,
-}: {
-  conversations: ConversationInfo[];
-  isLoading: boolean;
-  onNewChat: () => void;
-  onRename: (id: string, title: string) => Promise<void>;
-  onDelete: (id: string) => Promise<void>;
-}) => {
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [newTitle, setNewTitle] = useState<string>("");
-
-  // 이름 변경 모드 시작
-  const startEditing = (id: string, currentTitle: string) => {
-    setEditingId(id);
-    setNewTitle(currentTitle);
-  };
-
-  // 이름 변경 저장
-  const saveTitle = async (id: string) => {
-    if (newTitle.trim()) {
-      await onRename(id, newTitle.trim());
-    }
-    setEditingId(null);
-  };
-
-  // 삭제 확인
-  const confirmDelete = async (id: string) => {
-    if (window.confirm("정말 이 대화를 삭제하시겠습니까?")) {
-      await onDelete(id);
-    }
-  };
-
-  return (
-    <div className="h-full flex flex-col bg-zinc-50 dark:bg-zinc-900 rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-800">
-      <div className="p-3 border-b border-zinc-200 dark:border-zinc-800">
-        <h1 className="text-base font-semibold">대화 목록</h1>
-      </div>
-
-      <div className="p-3">
-        <Button
-          onClick={onNewChat}
-          size="sm"
-          className="w-full mb-3 flex items-center justify-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-xs h-8"
-        >
-          <Plus size={14} />
-          <span>새로운 대화</span>
-        </Button>
-      </div>
-
-      <div className="overflow-y-auto flex-grow p-3 pt-0">
-        {isLoading ? (
-          <div className="flex items-center justify-center h-24">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div>
-          </div>
-        ) : conversations.length === 0 ? (
-          <div className="text-center py-6 text-zinc-500 dark:text-zinc-400">
-            <p className="text-xs">대화 내역이 없습니다.</p>
-            <p className="text-xs mt-1.5">새로운 대화를 시작해보세요.</p>
-          </div>
-        ) : (
-          <ul className="space-y-2">
-            {conversations.map((conversation) => (
-              <li key={conversation.id} className="group">
-                {editingId === conversation.id ? (
-                  // 이름 편집 모드
-                  <div className="w-full p-2 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center">
-                    <input
-                      type="text"
-                      value={newTitle}
-                      onChange={(e) => setNewTitle(e.target.value)}
-                      className="flex-grow bg-transparent border-none focus:outline-none focus:ring-0 text-xs"
-                      autoFocus
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          saveTitle(conversation.id);
-                        }
-                        if (e.key === "Escape") {
-                          setEditingId(null);
-                        }
-                      }}
-                    />
-                    <Button
-                      size="sm"
-                      onClick={() => saveTitle(conversation.id)}
-                      className="ml-2 px-2 h-6 text-xs bg-indigo-600 hover:bg-indigo-700"
-                    >
-                      저장
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => setEditingId(null)}
-                      className="ml-1 px-2 h-6 text-xs"
-                    >
-                      취소
-                    </Button>
-                  </div>
-                ) : (
-                  // 일반 표시 모드
-                  <div className="flex w-full items-center">
-                    <Link
-                      href={`/chat/${conversation.id}`}
-                      className="flex-grow text-left p-2 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors block"
-                    >
-                      <div className="text-xs font-medium truncate">
-                        {conversation.title}
-                      </div>
-                      <div className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-0.5">
-                        {formatDistanceToNow(
-                          new Date(conversation.lastActive),
-                          {
-                            addSuffix: true,
-                            locale: ko,
-                          }
-                        )}
-                      </div>
-                    </Link>
-                    <div className="flex opacity-0 group-hover:opacity-100 transition-opacity pr-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          startEditing(conversation.id, conversation.title);
-                        }}
-                        title="이름 변경"
-                      >
-                        <Edit2 size={12} />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-6 w-6 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          confirmDelete(conversation.id);
-                        }}
-                        title="삭제"
-                      >
-                        <Trash2 size={12} />
-                      </Button>
-                    </div>
-                  </div>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-    </div>
-  );
-};
 
 interface ChatWindowProps {
   conversationId?: string;
@@ -180,6 +20,42 @@ interface ChatWindowProps {
   initialMessages?: Message[];
   initialHasMore?: boolean;
   initialTotalCount?: number;
+}
+
+// 채팅 메시지 스켈레톤
+function ChatMessageSkeleton() {
+  return (
+    <div className="space-y-6 p-4">
+      {/* 사용자 메시지 스켈레톤 */}
+      <div className="flex justify-end">
+        <div className="max-w-[70%] space-y-2">
+          <Skeleton className="h-4 w-48 ml-auto" />
+          <Skeleton className="h-10 w-64 rounded-2xl" />
+        </div>
+      </div>
+      {/* AI 메시지 스켈레톤 */}
+      <div className="flex justify-start">
+        <div className="max-w-[70%] space-y-2">
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-24 w-80 rounded-2xl" />
+        </div>
+      </div>
+      {/* 사용자 메시지 스켈레톤 */}
+      <div className="flex justify-end">
+        <div className="max-w-[70%] space-y-2">
+          <Skeleton className="h-4 w-40 ml-auto" />
+          <Skeleton className="h-10 w-56 rounded-2xl" />
+        </div>
+      </div>
+      {/* AI 메시지 스켈레톤 */}
+      <div className="flex justify-start">
+        <div className="max-w-[70%] space-y-2">
+          <Skeleton className="h-4 w-28" />
+          <Skeleton className="h-32 w-96 rounded-2xl" />
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function ChatWindow({
@@ -199,29 +75,30 @@ export default function ChatWindow({
     showChatList,
     conversations,
     currentChatTitle,
+    isTitleTyping,
     startNewConversation,
     hasMore,
     isLoadingMore,
     loadMore,
     renameConversation,
     deleteConversation,
-  } = useChatBot({ 
-    conversationId, 
+  } = useChatBot({
+    conversationId,
     showChatList: initialShowChatList,
     initialMessages,
     initialHasMore,
     initialTotalCount,
   });
-  const { user } = useUser();
 
-  // 주식 정보나 메시지가 있는지 확인
-  const hasStockInfo = messages.length > 0;
+  // 네트워크 패널 토글 상태
+  const [isNetworkOpen, setIsNetworkOpen] = useState(false);
+
+  // 네트워크 데이터 유무 확인
+  const hasNetworkData = subgraphData && subgraphData.node && subgraphData.node.length > 0;
 
   // 새 대화 시작 핸들러
   const handleNewChat = () => {
-    if (user?.id) {
-      startNewConversation(user.id);
-    }
+    startNewConversation();
   };
 
   // 대화방 이름 변경 핸들러
@@ -234,104 +111,149 @@ export default function ChatWindow({
     await deleteConversation(id);
   };
 
+  // 초기 로딩 상태 확인 (메시지가 아직 없고 로딩 중일 때)
+  const isInitialLoading = isLoading && messages.length === 0 && !streamingMessage;
+
+  if (showChatList) {
+    // 대화 목록 화면
+    return (
+      <div className="h-full p-6">
+        <ConversationList
+          conversations={conversations}
+          isLoading={isLoading}
+          onNewChat={handleNewChat}
+          onRename={handleRename}
+          onDelete={handleDelete}
+        />
+      </div>
+    );
+  }
+
+  // 채팅 화면 - 네트워크 패널 토글 가능
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 grow overflow-y-hidden h-full">
-      {showChatList ? (
-        // 대화 목록 화면
-        <div className="h-full lg:col-span-5 flex flex-col">
-          <ConversationList
-            conversations={conversations}
-            isLoading={isLoading}
-            onNewChat={handleNewChat}
-            onRename={handleRename}
-            onDelete={handleDelete}
-          />
-        </div>
-      ) : (
-        // 채팅 화면
-        <>
-          {/* 채팅 영역 - 모바일에서는 전체 너비, 데스크탑에서는 2/3 */}
-          <div className="h-full lg:col-span-2 flex flex-col bg-zinc-50 dark:bg-zinc-900 rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-800">
-            {/* 채팅 헤더 */}
-            <div className="flex items-center p-3 border-b border-zinc-200 dark:border-zinc-800">
-              <Link
-                href="/chat"
-                className="p-1 mr-2 rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
-              >
-                <ArrowLeft size={16} />
-              </Link>
-              <h1
-                className="text-sm font-semibold truncate flex-grow cursor-pointer hover:text-indigo-600 transition-colors"
-                onClick={() => {
-                  if (conversationId) {
-                    const newTitle = window.prompt(
-                      "대화 이름 변경",
-                      currentChatTitle
-                    );
-                    if (newTitle && newTitle.trim()) {
-                      handleRename(conversationId, newTitle.trim());
-                    }
+    <div className="h-full flex">
+      {/* 채팅 영역 */}
+      <div className={cn(
+        "flex-1 flex flex-col bg-zinc-50 dark:bg-zinc-900 rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-800 transition-all duration-300",
+        isNetworkOpen && "lg:mr-4"
+      )}>
+        {/* 채팅 헤더 */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-800/50">
+          <div className="flex items-center flex-1 min-w-0">
+            <Link
+              href="/chat"
+              className="p-2 mr-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors"
+            >
+              <ArrowLeft size={18} />
+            </Link>
+            <h1
+              className="text-sm font-semibold truncate flex-grow cursor-pointer hover:text-indigo-600 transition-colors group flex items-center gap-2"
+              onClick={() => {
+                if (conversationId && !isTitleTyping) {
+                  const newTitle = window.prompt(
+                    "대화 이름 변경",
+                    currentChatTitle
+                  );
+                  if (newTitle && newTitle.trim()) {
+                    handleRename(conversationId, newTitle.trim());
                   }
-                }}
-                title="클릭하여 대화 이름 변경"
-              >
-                {currentChatTitle}
-              </h1>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
-                onClick={() => {
-                  if (
-                    conversationId &&
-                    window.confirm("정말 이 대화를 삭제하시겠습니까?")
-                  ) {
-                    handleDelete(conversationId);
-                  }
-                }}
-                title="대화 삭제"
-              >
-                <Trash2 size={14} />
-              </Button>
-            </div>
-
-            {/* 채팅 히스토리 */}
-            <div className="p-4 overflow-y-auto grow">
-              <ChatMessageList
-                messages={messages}
-                streamingMessage={streamingMessage}
-                onFeedback={handleFeedback}
-                onLoadMore={loadMore}
-                hasMore={hasMore}
-                isLoadingMore={isLoadingMore}
+                }
+              }}
+              title={isTitleTyping ? "제목 생성 중..." : "클릭하여 대화 이름 변경"}
+            >
+              <TypingTitle
+                title={currentChatTitle}
+                isTyping={isTitleTyping}
               />
-            </div>
-
-            {/* 입력 영역 */}
-            <ChatInput onSendMessage={sendMessage} isLoading={isLoading} />
+              {!isTitleTyping && (
+                <Edit2
+                  size={12}
+                  className="opacity-0 group-hover:opacity-50 transition-opacity"
+                />
+              )}
+            </h1>
           </div>
 
-          {/* 주식 정보 영역 - 모바일에서는 숨김, 데스크탑에서는 1/3 */}
-          <div className="hidden lg:flex lg:flex-col gap-4 lg:col-span-3 h-full overflow-y-hidden">
-            {hasStockInfo ? (
-              <>
-                {/* <StockInfoDisplay stockInfo={stockInfo} /> */}
-                <StockChart subgraphData={subgraphData} />
-              </>
-            ) : (
-              <div className="flex items-center justify-center h-full rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 p-4">
-                <div className="text-center">
-                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                    주식 관련 질문을 하시면
-                    <br />
-                    상세 정보가 여기에 표시됩니다.
-                  </p>
-                </div>
-              </div>
-            )}
+          <div className="flex items-center gap-2">
+            {/* 관계 네트워크 토글 버튼 */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsNetworkOpen(!isNetworkOpen)}
+              className={cn(
+                "flex items-center gap-2 transition-all",
+                hasNetworkData
+                  ? "bg-indigo-50 dark:bg-indigo-950/50 border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/50"
+                  : "text-zinc-500 dark:text-zinc-400",
+                isNetworkOpen && "ring-2 ring-indigo-500 ring-offset-1"
+              )}
+              title={isNetworkOpen ? "관계 네트워크 닫기" : "관계 네트워크 열기"}
+            >
+              <Network size={16} />
+              <span className="hidden sm:inline">관계 네트워크</span>
+              {hasNetworkData && !isNetworkOpen && (
+                <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
+              )}
+              {isNetworkOpen ? (
+                <PanelRightClose size={14} className="hidden sm:inline" />
+              ) : (
+                <PanelRightOpen size={14} className="hidden sm:inline" />
+              )}
+            </Button>
+
+            {/* 삭제 버튼 */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
+              onClick={() => {
+                if (
+                  conversationId &&
+                  window.confirm("정말 이 대화를 삭제하시겠습니까?")
+                ) {
+                  handleDelete(conversationId);
+                }
+              }}
+              title="대화 삭제"
+            >
+              <Trash2 size={16} />
+            </Button>
           </div>
-        </>
-      )}
+        </div>
+
+        {/* 채팅 메시지 영역 */}
+        <div className="flex-1 overflow-y-auto px-4 py-4 lg:px-6">
+          {isInitialLoading ? (
+            <ChatMessageSkeleton />
+          ) : (
+            <ChatMessageList
+              messages={messages}
+              streamingMessage={streamingMessage}
+              onFeedback={handleFeedback}
+              onLoadMore={loadMore}
+              hasMore={hasMore}
+              isLoadingMore={isLoadingMore}
+            />
+          )}
+        </div>
+
+        {/* 입력 영역 */}
+        <div className="border-t border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800/50">
+          <ChatInput onSendMessage={sendMessage} isLoading={isLoading} />
+        </div>
+      </div>
+
+      {/* 관계 네트워크 사이드 패널 */}
+      <div
+        className={cn(
+          "hidden lg:block transition-all duration-300 overflow-hidden",
+          isNetworkOpen ? "w-[480px] xl:w-[560px] opacity-100" : "w-0 opacity-0"
+        )}
+      >
+        <div className="h-full w-[480px] xl:w-[560px]">
+          <StockChart subgraphData={subgraphData} />
+        </div>
+      </div>
     </div>
   );
 }

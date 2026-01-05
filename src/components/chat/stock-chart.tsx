@@ -540,33 +540,38 @@ export function StockChart({ subgraphData }: StockChartProps) {
   const snapGrid = useMemo(() => [20, 20] as [number, number], []);
 
   return (
-    <div className="flex flex-col grow overflow-y-hidden rounded-xl border-2 border-zinc-200 dark:border-zinc-700 p-4 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 shadow-lg">
-      <h3 className="text-xs font-bold mb-5 flex items-center gap-2 text-zinc-900 dark:text-zinc-100">
-        <span>🔍</span> 관계 네트워크
-      </h3>
+    <div className="flex flex-col h-full overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100">
+      {/* 헤더 */}
+      <div className="px-4 py-3 border-b border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/50">
+        <h3 className="text-sm font-semibold flex items-center gap-2">
+          <span>🔍</span> 관계 네트워크
+        </h3>
+      </div>
       {hasData ? (
-        <div className="grow w-full">
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-            onConnect={onConnect}
-            nodeTypes={nodeTypes}
-            snapToGrid={true}
-            snapGrid={snapGrid}
-            fitView
-            className="rounded-lg overflow-hidden bg-zinc-50 dark:bg-zinc-800"
-            proOptions={{ hideAttribution: true }}
-            defaultEdgeOptions={{
-              type: "straight",
-              style: { stroke: "#93c5fd", strokeWidth: 2 },
-            }}
-          >
-            <Background color="#94a3b8" gap={20} size={1} />
-            <Controls className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-md" />
-          </ReactFlow>
-          <div className="mt-4 flex gap-6 justify-center">
+        <div className="flex-1 w-full flex flex-col min-h-0">
+          <div className="flex-1 min-h-[300px]">
+            <ReactFlow
+              nodes={nodes}
+              edges={edges}
+              onNodesChange={onNodesChange}
+              onEdgesChange={onEdgesChange}
+              onConnect={onConnect}
+              nodeTypes={nodeTypes}
+              snapToGrid={true}
+              snapGrid={snapGrid}
+              fitView
+              className="rounded-lg overflow-hidden bg-zinc-50 dark:bg-zinc-800"
+              proOptions={{ hideAttribution: true }}
+              defaultEdgeOptions={{
+                type: "straight",
+                style: { stroke: "#93c5fd", strokeWidth: 2 },
+              }}
+            >
+              <Background color="#94a3b8" gap={20} size={1} />
+              <Controls className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-700 rounded-xl shadow-md" />
+            </ReactFlow>
+          </div>
+          <div className="py-3 flex gap-4 justify-center flex-wrap border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50">
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-full bg-blue-500"></div>
               <span className="text-xs text-zinc-700 dark:text-zinc-300">
@@ -594,16 +599,16 @@ export function StockChart({ subgraphData }: StockChartProps) {
           </div>
         </div>
       ) : (
-        <div className="flex items-center justify-center h-full grow rounded-lg bg-zinc-50 dark:bg-zinc-800">
+        <div className="flex items-center justify-center flex-1 rounded-lg bg-zinc-50 dark:bg-zinc-800 m-4">
           <div className="text-center p-8">
             <div className="text-4xl mb-4">📊</div>
-            <h3 className="text-lg font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-              노드 정보가 없습니다
+            <h3 className="text-base font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+              관계 네트워크 정보 없음
             </h3>
             <p className="text-sm text-zinc-500 dark:text-zinc-400">
-              관련 기업 및 관계 정보를 가져올 수 없습니다.
+              주식 관련 질문을 하시면
               <br />
-              다른 종목에 대해 질문해 보세요.
+              관련 기업 및 관계 정보가 표시됩니다.
             </p>
           </div>
         </div>

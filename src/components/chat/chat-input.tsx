@@ -15,8 +15,8 @@ export function ChatInput({ onSendMessage, isLoading }: ChatInputProps) {
   const [isComposing, setIsComposing] = useState(false);
 
   const handleSendMessage = () => {
-    // 조합 중이거나 입력이 없으면 리턴
-    if (isComposing || !input.trim()) return;
+    // 로딩 중, 조합 중이거나 입력이 없으면 리턴
+    if (isLoading || isComposing || !input.trim()) return;
 
     // 입력값을 변수에 저장
     const messageContent = input.trim();
@@ -43,6 +43,8 @@ export function ChatInput({ onSendMessage, isLoading }: ChatInputProps) {
           onKeyDown={(e) => {
             if (e.key === "Enter" && !e.shiftKey) {
               e.preventDefault();
+              // 로딩 중이면 무시
+              if (isLoading) return;
               // 약간의 지연 후 메시지 전송 (한글 입력 완료를 보장)
               setTimeout(() => {
                 if (!isComposing && input.trim()) {

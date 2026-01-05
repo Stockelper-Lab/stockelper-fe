@@ -5,12 +5,10 @@ import { NextRequest, NextResponse } from "next/server";
 // 특정 대화의 메시지 목록 조회 API
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> | { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // params가 Promise인 경우 await로 처리
-    const resolvedParams = await Promise.resolve(params);
-    const conversationId = resolvedParams.id;
+    const { id: conversationId } = await params;
 
     if (!conversationId) {
       return NextResponse.json(
@@ -71,12 +69,10 @@ export async function GET(
 // 특정 대화에 메시지 저장 API
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> | { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    // params가 Promise인 경우 await로 처리
-    const resolvedParams = await Promise.resolve(params);
-    const conversationId = resolvedParams.id;
+    const { id: conversationId } = await params;
 
     if (!conversationId) {
       return NextResponse.json(

@@ -4,7 +4,7 @@ import { ReactFlowProvider } from "@xyflow/react";
 
 export default function ChatPage() {
   return (
-    <div className="flex h-full flex-col p-8 overflow-scroll">
+    <div className="flex h-full flex-col p-6 lg:p-8 overflow-hidden">
       <PageHeader
         title="AI 어시스턴트"
         description={
@@ -13,13 +13,13 @@ export default function ChatPage() {
               💬 주식 투자에 관한 질문에 답변해 드립니다. LLM은 단순 데이터 가공
               결과만 제공합니다.
             </div>
-            <div className="text-xs text-red-500 dark:text-red-400">
+            <div className="text-xs text-red-500 dark:text-red-400 mt-1">
               ⚠️ 주의: 투자 결정에 대한 책임은 전적으로 사용자에게 있습니다.
             </div>
           </div>
         }
       />
-      <div className="rounded-xl border-zinc-100 dark:border-zinc-700/50 h-full overflow-auto">
+      <div className="flex-1 min-h-0 mt-4">
         <ReactFlowProvider>
           <ChatWindow showChatList={true} />
         </ReactFlowProvider>

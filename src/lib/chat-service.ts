@@ -11,14 +11,41 @@ export interface ConversationInfo {
   firstMessage?: string;
 }
 
-// 채팅방(Conversation) 생성
+// 채팅방(Conversation) 생성 (기존 - 하위 호환성 유지)
 export async function createConversation(userId: number) {
   const conversation = await prisma.conversation.create({
     data: {
       userId,
-      // 임시 제목 설정 (나중에 첫 번째 메시지 내용 등으로 업데이트 가능)
       title: "새 대화",
     },
+  });
+  return conversation;
+}
+
+// 채팅방(Conversation) 생성 - 지정된 ID로 생성
+export async function createConversationWithId(
+  userId: number,
+  conversationId: string,
+  title: string = "새 대화"
+) {
+  const conversation = await prisma.conversation.create({
+    data: {
+      id: conversationId,
+      userId,
+      title,
+    },
+  });
+  return conversation;
+}
+
+// 대화 제목 업데이트
+export async function updateConversationTitle(
+  conversationId: string,
+  title: string
+) {
+  const conversation = await prisma.conversation.update({
+    where: { id: conversationId },
+    data: { title },
   });
   return conversation;
 }

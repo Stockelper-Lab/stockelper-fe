@@ -1,9 +1,6 @@
 import { v4 as uuidv4 } from "uuid";
 import { Message, Subgraph, TradingAction } from "./types";
 
-// 현재 활성화된 대화 ID를 저장하는 변수
-let currentConversationId: string | null = null;
-
 /**
  * 스트리밍 텍스트에 포맷팅을 적용하는 함수
  * LLM API에서 delta 토큰이 공백 없이 전송될 때 가독성을 위해 포맷팅 적용
@@ -57,47 +54,15 @@ interface SSEEvent {
   error?: string | null;
 }
 
-// 대화 ID 초기화 함수
-async function ensureConversationId(): Promise<string> {
-  if (!currentConversationId) {
-    if (typeof window !== "undefined") {
-      const storedId = localStorage.getItem("currentConversationId");
-      if (storedId) {
-        currentConversationId = storedId;
-        return storedId;
-      }
-    }
-
-    try {
-      const response = await fetch("/api/conversations", {
-        method: "POST",
-      });
-
-      if (!response.ok) {
-        throw new Error(`대화 생성 실패: ${response.status}`);
-      }
-
-      const newConversation = await response.json();
-      if (!newConversation.id) {
-        throw new Error("서버에서 유효한 대화 ID를 반환하지 않았습니다.");
-      }
-
-      currentConversationId = newConversation.id;
-
-      if (typeof window !== "undefined") {
-        localStorage.setItem("currentConversationId", newConversation.id);
-      }
-    } catch (error) {
-      console.error("새 대화 생성 중 오류 발생:", error);
-      throw error;
+// 대화 ID 가져오기 함수 (localStorage에서)
+function getConversationId(): string {
+  if (typeof window !== "undefined") {
+    const storedId = localStorage.getItem("currentConversationId");
+    if (storedId) {
+      return storedId;
     }
   }
-
-  if (!currentConversationId) {
-    throw new Error("대화 ID를 생성할 수 없습니다.");
-  }
-
-  return currentConversationId;
+  throw new Error("대화 ID를 찾을 수 없습니다.");
 }
 
 // 메시지 저장 함수
@@ -353,7 +318,7 @@ export async function sendMessage(
   onChunkReceived?: (chunkText: string) => void,
   onResponseComplete?: (message: Message) => void
 ): Promise<Message> {
-  const conversationId = await ensureConversationId();
+  const conversationId = getConversationId();
 
   const userMessage: Message = {
     id: uuidv4(),
@@ -384,7 +349,7 @@ export async function sendFeedback(
   onChunkReceived?: (chunkText: string) => void,
   onResponseComplete?: (message: Message) => void
 ): Promise<Message> {
-  const conversationId = await ensureConversationId();
+  const conversationId = getConversationId();
 
   const userResponseMessage: Message = {
     id: uuidv4(),
@@ -413,7 +378,7 @@ export async function sendFeedback(
 // 채팅 기록 불러오기
 export async function loadChatHistory(): Promise<Message[]> {
   try {
-    const conversationId = await ensureConversationId();
+    const conversationId = getConversationId();
     if (!conversationId) {
       console.error("대화 ID를 찾을 수 없습니다.");
       return [];
