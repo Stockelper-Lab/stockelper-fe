@@ -1,29 +1,34 @@
-import { verifyToken } from "@/lib/auth";
-import { cookies } from "next/headers";
+import { validateSession } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 
-// 세션에서 user_id 가져오기
-async function getUserIdFromSession() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get(process.env.COOKIE_NAME || "auth-token")?.value;
-  if (!token) return null;
-
-  const decoded = verifyToken(token);
-  return decoded ? parseInt(decoded.userId, 10) : null;
-}
-
-// 포트폴리오 추천 API 호출 (Next.js 중계)
+// 포트폴리오 추천 API 호출 및 저장
 export async function POST(req: NextRequest) {
   try {
-    // TODO: 테스트용 고정값 - 나중에 세션에서 가져오도록 변경
-    // const userId = await getUserIdFromSession();
-    // if (!userId) {
-    //   return NextResponse.json(
-    //     { error: "인증이 필요합니다." },
-    //     { status: 401 }
-    //   );
-    // }
-    const userId = 4; // 고정값
+    // 세션에서 userId 가져오기
+    const cookieName = process.env.COOKIE_NAME || "auth-token";
+    const token = req.cookies.get(cookieName)?.value;
+
+    if (!token) {
+      return NextResponse.json(
+        { error: "인증이 필요합니다." },
+        { status: 401 }
+      );
+    }
+
+    const userId = await validateSession(token);
+    if (!userId) {
+      return NextResponse.json(
+        { error: "인증이 필요합니다." },
+        { status: 401 }
+      );
+    }
+
+    const userIdNum = parseInt(userId, 10);
+
+    // 요청 본문에서 job_id 가져오기 (선택 사항)
+    const body = await req.json().catch(() => ({}));
+    const jobId = body.job_id || null;
 
     // 환경 변수에서 포트폴리오 서버 엔드포인트 가져오기
     const PORTFOLIO_ENDPOINT = process.env.PORTFOLIO_ENDPOINT || "http://220.86.116.160:21008";
@@ -35,7 +40,7 @@ export async function POST(req: NextRequest) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        user_id: userId,
+        user_id: userIdNum,
       }),
     });
 
@@ -49,9 +54,84 @@ export async function POST(req: NextRequest) {
     }
 
     const data = await portfolioResponse.json();
-    return NextResponse.json(data);
+
+    // 데이터베이스에 저장
+    const saved = await prisma.portfolioRecommendation.create({
+      data: {
+        userId: userIdNum,
+        jobId: jobId,
+        investorType: data.investor_type,
+        result: data.result,
+      },
+    });
+
+    // 저장된 데이터 반환
+    return NextResponse.json({
+      id: saved.id,
+      job_id: saved.jobId,
+      investor_type: saved.investorType,
+      result: saved.result,
+      created_at: saved.createdAt,
+    });
   } catch (error) {
     console.error("포트폴리오 추천 API 라우트 오류:", error);
+    return NextResponse.json(
+      {
+        error: "서버 오류가 발생했습니다.",
+        details: error instanceof Error ? error.message : "알 수 없는 오류",
+      },
+      { status: 500 }
+    );
+  }
+}
+
+// 포트폴리오 추천 이력 조회
+export async function GET(req: NextRequest) {
+  try {
+    // 세션에서 userId 가져오기
+    const cookieName = process.env.COOKIE_NAME || "auth-token";
+    const token = req.cookies.get(cookieName)?.value;
+
+    if (!token) {
+      return NextResponse.json(
+        { error: "인증이 필요합니다." },
+        { status: 401 }
+      );
+    }
+
+    const userId = await validateSession(token);
+    if (!userId) {
+      return NextResponse.json(
+        { error: "인증이 필요합니다." },
+        { status: 401 }
+      );
+    }
+
+    const userIdNum = parseInt(userId, 10);
+
+    // 데이터베이스에서 조회
+    const recommendations = await prisma.portfolioRecommendation.findMany({
+      where: {
+        userId: userIdNum,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+      take: 50, // 최대 50개까지만
+    });
+
+    return NextResponse.json(
+      recommendations.map((rec) => ({
+        id: rec.id,
+        userId: rec.userId,
+        jobId: rec.jobId,
+        investorType: rec.investorType,
+        result: rec.result,
+        createdAt: rec.createdAt,
+      }))
+    );
+  } catch (error) {
+    console.error("포트폴리오 추천 이력 조회 오류:", error);
     return NextResponse.json(
       {
         error: "서버 오류가 발생했습니다.",

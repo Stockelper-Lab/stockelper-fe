@@ -26,9 +26,18 @@ export default function PortfolioDetailPage() {
 
   useEffect(() => {
     if (!userLoading) {
-      const found = getPortfolioRecommendationById(portfolioId);
-      setPortfolio(found);
-      setIsLoading(false);
+      const loadPortfolio = async () => {
+        try {
+          const found = await getPortfolioRecommendationById(portfolioId);
+          setPortfolio(found);
+        } catch (err) {
+          console.error("포트폴리오 추천 로드 실패:", err);
+          setPortfolio(null);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      loadPortfolio();
     }
   }, [portfolioId, userLoading]);
 

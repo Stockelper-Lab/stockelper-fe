@@ -26,7 +26,8 @@ model users {
   created_at       DateTime? @default(now()) @db.Timestamp(6)
   updated_at       DateTime? @default(now()) @db.Timestamp(6)
 
-  conversations Conversation[]
+  conversations           Conversation[]
+  portfolioRecommendations PortfolioRecommendation[]
 }
 
 model survey {
@@ -83,4 +84,22 @@ model Chat {
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
 
   @@map("chats")
+}
+
+// 포트폴리오 추천 모델
+model PortfolioRecommendation {
+  id           String   @id @default(uuid())
+  userId       Int      @map("user_id")
+  jobId        String?  @map("job_id") // Chat과 연결되는 Job ID (선택)
+  investorType String   @map("investor_type")
+  result       String   // 마크다운 형식의 결과
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // 관계 설정
+  user users @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([jobId])
+  @@map("portfolio_recommendations")
 }

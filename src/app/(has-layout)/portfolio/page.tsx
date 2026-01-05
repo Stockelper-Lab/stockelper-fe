@@ -5,7 +5,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useUser } from "@/hooks/use-user";
 import {
   requestPortfolioRecommendation,
-  savePortfolioRecommendation,
   getPortfolioRecommendationHistory,
   PortfolioRecommendationHistory,
 } from "@/lib/api/portfolio";
@@ -55,9 +54,18 @@ export default function PortfolioPage() {
   // 이력 로드
   useEffect(() => {
     if (user && !userLoading) {
-      const loadedHistory = getPortfolioRecommendationHistory(user.id);
-      setHistory(loadedHistory);
-      setIsLoading(false);
+      const loadHistory = async () => {
+        try {
+          const loadedHistory = await getPortfolioRecommendationHistory(user.id);
+          setHistory(loadedHistory);
+        } catch (err) {
+          console.error("포트폴리오 추천 이력 로드 실패:", err);
+          setHistory([]);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      loadHistory();
     }
   }, [user, userLoading]);
 
@@ -70,10 +78,9 @@ export default function PortfolioPage() {
 
     try {
       const recommendation = await requestPortfolioRecommendation(user.id);
-      const savedEntry = savePortfolioRecommendation(user.id, recommendation);
       
       // 새로 생성된 추천 상세 페이지로 이동
-      router.push(`/portfolio/${savedEntry.id}`);
+      router.push(`/portfolio/${recommendation.id}`);
     } catch (err) {
       console.error("포트폴리오 추천 요청 실패:", err);
       setError(
