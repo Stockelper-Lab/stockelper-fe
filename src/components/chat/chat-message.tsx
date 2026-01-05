@@ -14,13 +14,13 @@ export function ChatMessage({ message, onFeedback }: ChatMessageProps) {
   switch (message.role) {
     case "user":
       containerStyle = "bg-blue-500 text-white shadow-md";
-      textStyle = "text-[15px] leading-relaxed";
+      textStyle = "text-xs leading-relaxed";
       alignment = "justify-end";
       break;
     case "question": // This is for active questions awaiting feedback
       containerStyle =
         "bg-amber-50 border border-amber-200 text-amber-800 shadow-md dark:bg-amber-900 dark:border-amber-700 dark:text-amber-100";
-      textStyle = "text-[15px] leading-relaxed font-medium"; // Questions have a medium font weight
+      textStyle = "text-xs leading-relaxed font-medium"; // Questions have a medium font weight
       alignment = "justify-start";
       break;
     case "assistant": // This is for normal assistant messages AND questions that have received feedback
@@ -32,7 +32,7 @@ export function ChatMessage({ message, onFeedback }: ChatMessageProps) {
     default:
       // Fallback for any other roles, though not expected currently
       containerStyle = "bg-gray-200 dark:bg-gray-600 shadow-sm";
-      textStyle = "text-[15px] leading-relaxed";
+      textStyle = "text-xs leading-relaxed";
       alignment = "justify-start";
       break;
   }
