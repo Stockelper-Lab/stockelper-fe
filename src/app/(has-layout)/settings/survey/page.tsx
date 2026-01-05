@@ -10,7 +10,7 @@ import {
 } from "@/app/(no-layout)/sign-up/components/survey-step";
 import { Skeleton } from "@/components/ui/skeleton";
 import { fetchSurvey, updateSurvey } from "@/lib/api/settings";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import PageHeader from "../../components/page-header";
 
 export default function ResetSurveyPage() {
@@ -52,7 +52,7 @@ export default function ResetSurveyPage() {
       : null;
 
   return (
-    <div className="p-8 h-full">
+    <div className="p-8">
       <div className="max-w-2xl mx-auto">
         <PageHeader
           title="투자 성향 재설정"

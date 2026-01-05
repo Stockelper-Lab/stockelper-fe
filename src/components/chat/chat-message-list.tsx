@@ -2,6 +2,7 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ChatMessage } from "./chat-message";
+import { StreamingMessage } from "./streaming-message";
 import { Message } from "./types";
 
 interface ChatMessageListProps {
@@ -249,9 +250,9 @@ export function ChatMessageList({
         </div>
       ))}
 
-      {/* 스트리밍 메시지가 있을 경우 표시 */}
+      {/* 스트리밍 메시지가 있을 경우 표시 - 진행 상태 UI 포함 */}
       {streamingMessage && (
-        <ChatMessage
+        <StreamingMessage
           key={`streaming-${streamingMessage.id}`}
           message={streamingMessage}
         />

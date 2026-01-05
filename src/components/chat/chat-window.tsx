@@ -115,9 +115,9 @@ export default function ChatWindow({
   const isInitialLoading = isLoading && messages.length === 0 && !streamingMessage;
 
   if (showChatList) {
-    // 대화 목록 화면
+    // 대화 목록 화면 - 전체 높이 사용
     return (
-      <div className="h-full p-6">
+      <div className="h-full flex flex-col">
         <ConversationList
           conversations={conversations}
           isLoading={isLoading}
@@ -134,7 +134,7 @@ export default function ChatWindow({
     <div className="h-full flex">
       {/* 채팅 영역 */}
       <div className={cn(
-        "flex-1 flex flex-col bg-zinc-50 dark:bg-zinc-900 rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-800 transition-all duration-300",
+        "flex-1 flex flex-col bg-zinc-50 dark:bg-zinc-900 overflow-hidden transition-all duration-300",
         isNetworkOpen && "lg:mr-4"
       )}>
         {/* 채팅 헤더 */}

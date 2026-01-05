@@ -85,7 +85,7 @@ export default function AccountSettingsPage() {
 
   if (loading) {
     return (
-      <div className="p-8 h-full overflow-auto">
+      <div className="p-8 overflow-auto">
         <div className="max-w-2xl mx-auto">
           <PageHeader
             title="계정 설정"
@@ -102,7 +102,7 @@ export default function AccountSettingsPage() {
   }
 
   return (
-    <div className="p-8 h-full">
+    <div className="p-8">
       <div className="max-w-2xl mx-auto">
         <PageHeader
           title="계정 설정"

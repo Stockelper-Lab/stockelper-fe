@@ -18,8 +18,9 @@ import {
   sendFeedback as apiSendFeedback,
   sendMessage as apiSendMessage,
   isValidTradingAction,
+  OnProgressCallback,
 } from "./chat-api";
-import { Message, Subgraph, TradingAction } from "./types";
+import { Message, Subgraph, TradingAction, PROGRESS_STEP_LABELS } from "./types";
 
 // 기본 타입 - 필요에 따라 확장할 수 있음
 export interface GraphData {
@@ -425,6 +426,7 @@ export function useChatBot(options?: ChatBotOptions) {
                 role: "assistant",
                 content: chunkText,
                 timestamp: new Date(),
+                progressStep: null,
               });
             });
           },
@@ -436,6 +438,21 @@ export function useChatBot(options?: ChatBotOptions) {
             }
             if (finalMessage.trading_action) {
               setTradingAction(finalMessage.trading_action);
+            }
+          },
+          // Progress 콜백
+          (step: string, status: "start" | "end") => {
+            if (status === "start") {
+              const progressLabel = PROGRESS_STEP_LABELS[step] || step;
+              flushSync(() => {
+                setStreamingMessage((prev) => ({
+                  id: prev?.id || feedbackStreamingMessageId,
+                  role: "assistant",
+                  content: prev?.content || "",
+                  timestamp: prev?.timestamp || new Date(),
+                  progressStep: progressLabel,
+                }));
+              });
             }
           }
         );
@@ -554,6 +571,9 @@ export function useChatBot(options?: ChatBotOptions) {
         });
       }
 
+      // 현재 진행 상태를 추적하는 변수
+      let currentProgressStep: string | null = null;
+
       try {
         await apiSendMessage(
           content,
@@ -567,6 +587,7 @@ export function useChatBot(options?: ChatBotOptions) {
                 role: "assistant",
                 content: chunkText,
                 timestamp: new Date(),
+                progressStep: null, // 텍스트가 오면 progress 표시 제거
               });
             });
           },
@@ -599,6 +620,23 @@ export function useChatBot(options?: ChatBotOptions) {
                 "유효하지 않은 trading_action이 감지되었습니다:",
                 finalMessage.trading_action
               );
+            }
+          },
+          // Progress 콜백 - 분석 단계 업데이트
+          (step: string, status: "start" | "end") => {
+            if (status === "start") {
+              currentProgressStep = step;
+              // 진행 상태를 스트리밍 메시지에 반영
+              const progressLabel = PROGRESS_STEP_LABELS[step] || step;
+              flushSync(() => {
+                setStreamingMessage((prev) => ({
+                  id: prev?.id || streamingMessageId,
+                  role: "assistant",
+                  content: prev?.content || "",
+                  timestamp: prev?.timestamp || new Date(),
+                  progressStep: progressLabel,
+                }));
+              });
             }
           }
         );

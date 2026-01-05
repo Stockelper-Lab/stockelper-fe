@@ -120,12 +120,16 @@ export function isValidTradingAction(action: TradingAction): boolean {
   return true;
 }
 
+// Progress 콜백 타입
+export type OnProgressCallback = (step: string, status: "start" | "end") => void;
+
 // 스트림 처리 헬퍼 함수
 async function processStream(
   response: Response,
   conversationId: string,
   onChunkReceived?: (chunkText: string) => void,
-  onResponseComplete?: (message: Message) => void
+  onResponseComplete?: (message: Message) => void,
+  onProgress?: OnProgressCallback
 ): Promise<Message> {
   if (!response.body) {
     throw new Error("응답 본문이 없습니다.");
@@ -136,13 +140,26 @@ async function processStream(
   let buffer = "";
   let lastMessage: Message | null = null;
   let responseText = "";
+  let receivedChunks = 0; // 디버깅용 카운터
+
+  console.log("[Stream] 스트림 처리 시작");
 
   while (true) {
     const { done, value } = await reader.read();
     if (done) {
+      console.log("[Stream] 스트림 종료. 총 청크:", receivedChunks, "누적 텍스트 길이:", responseText.length);
       break;
     }
-    buffer += decoder.decode(value, { stream: true });
+    
+    const decodedChunk = decoder.decode(value, { stream: true });
+    buffer += decodedChunk;
+    receivedChunks++;
+    
+    // 첫 5개 청크는 상세 로깅
+    if (receivedChunks <= 5) {
+      console.log(`[Stream] 청크 #${receivedChunks}:`, decodedChunk.substring(0, 200));
+    }
+    
     const lines = buffer.split("\n");
     buffer = lines.pop() || "";
 
@@ -163,8 +180,12 @@ async function processStream(
       try {
         const event = JSON.parse(jsonStr) as SSEEvent;
 
-        // progress 이벤트는 무시 (로깅만)
-        if (event.type === "progress") {
+        // progress 이벤트 처리 - 콜백으로 전달
+        if (event.type === "progress" && event.step) {
+          console.log("[Stream] Progress 이벤트:", event.step, event.status);
+          if (onProgress) {
+            onProgress(event.step, event.status as "start" | "end");
+          }
           continue;
         }
 
@@ -193,6 +214,7 @@ async function processStream(
 
         // final 이벤트: 최종 메시지 수신
         if (event.type === "final" && event.message) {
+          console.log("[Stream] Final 이벤트 수신, 메시지 길이:", event.message.length);
           responseText = event.message;
           
           lastMessage = {
@@ -213,9 +235,9 @@ async function processStream(
           }
         }
       } catch (error) {
-        // JSON 파싱 실패 시 무시 (빈 줄이나 잘못된 형식일 수 있음)
+        // JSON 파싱 실패 시 로깅
         if (trimmedLine !== "" && !trimmedLine.startsWith(":")) {
-          console.warn("스트림 청크 파싱 경고:", trimmedLine, error);
+          console.warn("[Stream] 파싱 실패:", trimmedLine.substring(0, 100), error);
         }
       }
     }
@@ -233,12 +255,18 @@ async function processStream(
   const finalMessage: Message = lastMessage;
 
   // final 이벤트를 받지 못한 경우 delta로 누적된 메시지 사용
-  if (!finalMessage.subgraph && !finalMessage.trading_action) {
-    finalMessage.content = responseText;
+  if (!finalMessage.subgraph && !finalMessage.trading_action && responseText) {
+    finalMessage.content = formatStreamingText(responseText);
   }
 
-  await saveMessageToAPI(conversationId, finalMessage);
+  try {
+    await saveMessageToAPI(conversationId, finalMessage);
+  } catch (saveError) {
+    console.error("메시지 저장 실패 (스트림 완료 후):", saveError);
+    // 저장 실패해도 사용자에게는 응답 표시
+  }
 
+  // trading_action이 있고 유효한 경우 질문 메시지 추가
   if (
     finalMessage.trading_action &&
     isValidTradingAction(finalMessage.trading_action)
@@ -254,14 +282,22 @@ async function processStream(
       timestamp: new Date(),
       feedbackResponse: null,
     };
-    await saveMessageToAPI(conversationId, questionMessage);
+    
+    try {
+      await saveMessageToAPI(conversationId, questionMessage);
+    } catch (saveError) {
+      console.error("질문 메시지 저장 실패:", saveError);
+    }
 
     if (onResponseComplete) {
       onResponseComplete(finalMessage);
       setTimeout(() => onResponseComplete(questionMessage), 100);
     }
-  } else if (onResponseComplete) {
-    onResponseComplete(finalMessage);
+  } else {
+    // trading_action이 없는 경우에도 반드시 onResponseComplete 호출
+    if (onResponseComplete) {
+      onResponseComplete(finalMessage);
+    }
   }
 
   return finalMessage;
@@ -272,7 +308,8 @@ async function handleApiCall(
   userId: number,
   requestBody: Record<string, unknown>,
   onChunkReceived?: (chunkText: string) => void,
-  onResponseComplete?: (message: Message) => void
+  onResponseComplete?: (message: Message) => void,
+  onProgress?: OnProgressCallback
 ): Promise<Message> {
   try {
     // Next 서버 API를 통해 LLM과 통신
@@ -292,7 +329,8 @@ async function handleApiCall(
       response,
       conversationId,
       onChunkReceived,
-      onResponseComplete
+      onResponseComplete,
+      onProgress
     );
   } catch (error) {
     console.error("API 호출 중 오류 발생:", error);
@@ -316,7 +354,8 @@ export async function sendMessage(
   message: string,
   userId: number,
   onChunkReceived?: (chunkText: string) => void,
-  onResponseComplete?: (message: Message) => void
+  onResponseComplete?: (message: Message) => void,
+  onProgress?: OnProgressCallback
 ): Promise<Message> {
   const conversationId = getConversationId();
 
@@ -337,7 +376,8 @@ export async function sendMessage(
       human_feedback: null,
     },
     onChunkReceived,
-    onResponseComplete
+    onResponseComplete,
+    onProgress
   );
 }
 
@@ -347,7 +387,8 @@ export async function sendFeedback(
   humanFeedback: boolean,
   userId: number,
   onChunkReceived?: (chunkText: string) => void,
-  onResponseComplete?: (message: Message) => void
+  onResponseComplete?: (message: Message) => void,
+  onProgress?: OnProgressCallback
 ): Promise<Message> {
   const conversationId = getConversationId();
 
@@ -371,7 +412,8 @@ export async function sendFeedback(
       human_feedback: humanFeedback,
     },
     onChunkReceived,
-    onResponseComplete
+    onResponseComplete,
+    onProgress
   );
 }
 

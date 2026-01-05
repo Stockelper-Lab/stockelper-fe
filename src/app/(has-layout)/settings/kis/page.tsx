@@ -75,7 +75,7 @@ export default function KisSettingsPage() {
   }
 
   return (
-    <div className="p-8 h-full">
+    <div className="p-8">
       <div className="max-w-2xl mx-auto">
         <PageHeader
           title="KIS 설정"

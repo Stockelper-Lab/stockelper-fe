@@ -1,16 +1,18 @@
 "use client";
 
-import PageHeader from "@/app/(has-layout)/components/page-header";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useUser } from "@/hooks/use-user";
-import { fetchPortfolioRecommendations, PortfolioRecommendation, PortfolioItem } from "@/lib/api/portfolio";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useQuery } from "@tanstack/react-query";
+import {
+  getPortfolioRecommendationById,
+  PortfolioRecommendationHistory,
+} from "@/lib/api/portfolio";
+import { MarkdownRenderer } from "@/components/chat/markdown-renderer";
 import { useParams, useRouter } from "next/navigation";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, TrendingUp, User } from "lucide-react";
+import { useEffect, useState } from "react";
 
 export default function PortfolioDetailPage() {
   const { user, loading: userLoading } = useUser();
@@ -18,23 +20,36 @@ export default function PortfolioDetailPage() {
   const router = useRouter();
   const portfolioId = params.id as string;
 
-  const {
-    data: recommendations,
-    isLoading,
-    error,
-  } = useQuery({
-    queryKey: ["portfolio-recommendations", user?.id],
-    queryFn: () => fetchPortfolioRecommendations(user!.id),
-    enabled: !!user && !userLoading,
-  });
+  const [portfolio, setPortfolio] =
+    useState<PortfolioRecommendationHistory | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (!userLoading) {
+      const found = getPortfolioRecommendationById(portfolioId);
+      setPortfolio(found);
+      setIsLoading(false);
+    }
+  }, [portfolioId, userLoading]);
 
   if (userLoading || isLoading) {
     return (
-      <div className="flex h-full flex-col p-8 overflow-scroll">
-        <PageHeader title="포트폴리오 추천 상세" description="포트폴리오 추천 정보를 불러오는 중..." />
-        <div className="mt-6 space-y-4">
-          <Skeleton className="h-32 w-full" />
-          <Skeleton className="h-64 w-full" />
+      <div className="h-full flex flex-col">
+        {/* 헤더 스켈레톤 */}
+        <div className="flex items-center gap-3 px-6 py-4 border-b border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800/50 flex-shrink-0">
+          <Skeleton className="w-10 h-10 rounded-xl" />
+          <div className="space-y-2">
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-3 w-48" />
+          </div>
+        </div>
+        {/* 콘텐츠 스켈레톤 */}
+        <div className="flex-1 overflow-y-auto bg-zinc-50 dark:bg-zinc-900/50 p-6 pb-12">
+          <div className="space-y-4 max-w-4xl mx-auto">
+            <Skeleton className="h-8 w-64" />
+            <Skeleton className="h-64 w-full" />
+            <Skeleton className="h-32 w-full" />
+          </div>
         </div>
       </div>
     );
@@ -42,158 +57,113 @@ export default function PortfolioDetailPage() {
 
   if (!user) {
     return (
-      <div className="flex h-full flex-col p-8 overflow-scroll">
-        <PageHeader title="포트폴리오 추천 상세" description="로그인이 필요합니다." />
+      <div className="h-full flex flex-col items-center justify-center">
+        <p className="text-zinc-500 dark:text-zinc-400">
+          로그인이 필요합니다.
+        </p>
       </div>
     );
   }
-
-  if (error) {
-    return (
-      <div className="flex h-full flex-col p-8 overflow-scroll">
-        <PageHeader title="포트폴리오 추천 상세" description="포트폴리오 추천 정보를 불러오는 중..." />
-        <div className="mt-6">
-          <Card>
-            <CardContent className="pt-6">
-              <p className="text-red-500 dark:text-red-400">
-                포트폴리오 추천 정보를 불러오는 중 오류가 발생했습니다.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
-  }
-
-  const portfolioList = Array.isArray(recommendations) ? recommendations : [];
-  const portfolioIndex = parseInt(portfolioId, 10);
-  const portfolio = portfolioList[portfolioIndex] || portfolioList.find((p) => p.id === portfolioIndex);
 
   if (!portfolio) {
     return (
-      <div className="flex h-full flex-col p-8 overflow-scroll">
-        <PageHeader title="포트폴리오 추천 상세" description="포트폴리오 추천을 찾을 수 없습니다." />
-        <div className="mt-6">
-          <Card>
-            <CardContent className="pt-6">
-              <p className="text-zinc-500 dark:text-zinc-400 text-center">
-                해당 포트폴리오 추천을 찾을 수 없습니다.
-              </p>
-              <div className="mt-4 flex justify-center">
-                <Button onClick={() => router.push("/portfolio")} variant="outline">
-                  목록으로 돌아가기
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+      <div className="h-full flex flex-col">
+        {/* 헤더 */}
+        <div className="flex items-center gap-3 px-6 py-4 border-b border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800/50 flex-shrink-0">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => router.push("/portfolio")}
+            className="mr-2"
+          >
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg shadow-amber-500/20">
+            <TrendingUp className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
+              포트폴리오 추천
+            </h1>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+              추천을 찾을 수 없습니다
+            </p>
+          </div>
+        </div>
+
+        {/* 콘텐츠 */}
+        <div className="flex-1 overflow-y-auto bg-zinc-50 dark:bg-zinc-900/50 p-6 pb-12 flex flex-col items-center justify-center">
+          <div className="text-center">
+            <p className="text-zinc-500 dark:text-zinc-400 mb-4">
+              해당 포트폴리오 추천을 찾을 수 없습니다.
+            </p>
+            <Button
+              onClick={() => router.push("/portfolio")}
+              variant="outline"
+            >
+              목록으로 돌아가기
+            </Button>
+          </div>
         </div>
       </div>
     );
   }
 
-  const timestamp = portfolio.timestamp || portfolio.created_at;
-  const dateStr = timestamp
-    ? format(new Date(timestamp), "yyyy년 MM월 dd일 HH:mm", { locale: ko })
-    : "날짜 정보 없음";
-
-  const recommendations = portfolio.recommendations || [];
-  const totalWeight = recommendations.reduce((sum: number, item: PortfolioItem) => {
-    return sum + (item.weight || 0);
-  }, 0);
+  const dateStr = format(
+    new Date(portfolio.createdAt),
+    "yyyy년 MM월 dd일 HH:mm",
+    { locale: ko }
+  );
 
   return (
-    <div className="flex h-full flex-col p-8 overflow-scroll">
-      <div className="mb-4">
+    <div className="h-full flex flex-col">
+      {/* 헤더 */}
+      <div className="flex items-center gap-3 px-6 py-4 border-b border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800/50 flex-shrink-0">
         <Button
           variant="ghost"
+          size="sm"
           onClick={() => router.push("/portfolio")}
-          className="mb-2"
+          className="mr-2"
         >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          목록으로
+          <ArrowLeft className="w-4 h-4" />
         </Button>
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg shadow-amber-500/20">
+          <TrendingUp className="w-5 h-5 text-white" />
+        </div>
+        <div>
+          <h1 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">
+            포트폴리오 추천
+          </h1>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">{dateStr}</p>
+        </div>
       </div>
-      <PageHeader
-        title="포트폴리오 추천 상세"
-        description={`${dateStr} 시점의 포트폴리오 추천`}
-      />
-      <div className="mt-6 space-y-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>추천 정보</CardTitle>
-            <CardDescription>{dateStr}</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-sm text-zinc-600 dark:text-zinc-400">추천 종목 수</span>
-                <span className="text-sm font-medium">{recommendations.length}개</span>
-              </div>
-              {totalWeight > 0 && (
-                <div className="flex justify-between">
-                  <span className="text-sm text-zinc-600 dark:text-zinc-400">총 비중</span>
-                  <span className="text-sm font-medium">{totalWeight.toFixed(2)}%</span>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>추천 종목</CardTitle>
-            <CardDescription>포트폴리오 구성 종목</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {recommendations.length === 0 ? (
-              <p className="text-zinc-500 dark:text-zinc-400 text-center py-4">
-                추천 종목이 없습니다.
+      {/* 콘텐츠 */}
+      <div className="flex-1 overflow-y-auto bg-zinc-50 dark:bg-zinc-900/50 p-6 pb-12">
+        <div className="max-w-4xl mx-auto space-y-6">
+          {/* 투자 성향 배지 */}
+          <div className="flex items-center gap-3 p-4 rounded-xl bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
+            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-indigo-100 to-purple-100 dark:from-indigo-900/50 dark:to-purple-900/50 flex items-center justify-center">
+              <User className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+            </div>
+            <div>
+              <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                투자 성향
               </p>
-            ) : (
-              <div className="space-y-3">
-                {recommendations.map((item: PortfolioItem, index: number) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between p-4 rounded-lg border border-zinc-200 dark:border-zinc-700"
-                  >
-                    <div className="flex-1">
-                      <div className="font-medium text-zinc-900 dark:text-zinc-100">
-                        {item.stock_name || item.stock_code || `종목 ${index + 1}`}
-                      </div>
-                      {item.stock_code && (
-                        <div className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-                          {item.stock_code}
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-4">
-                      {item.weight !== undefined && (
-                        <div className="text-right">
-                          <div className="text-sm text-zinc-500 dark:text-zinc-400">비중</div>
-                          <div className="font-medium">{item.weight.toFixed(2)}%</div>
-                        </div>
-                      )}
-                      {item.price !== undefined && (
-                        <div className="text-right">
-                          <div className="text-sm text-zinc-500 dark:text-zinc-400">가격</div>
-                          <div className="font-medium">{item.price.toLocaleString()}원</div>
-                        </div>
-                      )}
-                      {item.quantity !== undefined && (
-                        <div className="text-right">
-                          <div className="text-sm text-zinc-500 dark:text-zinc-400">수량</div>
-                          <div className="font-medium">{item.quantity.toLocaleString()}</div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+              <p className="font-semibold text-zinc-900 dark:text-zinc-100">
+                {portfolio.investorType}
+              </p>
+            </div>
+          </div>
+
+          {/* 마크다운 결과 */}
+          <div className="p-6 rounded-xl bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
+            <div className="prose prose-zinc dark:prose-invert max-w-none">
+              <MarkdownRenderer content={portfolio.result} />
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
 }
-
