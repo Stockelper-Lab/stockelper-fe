@@ -54,29 +54,30 @@ const ConversationList = ({
 
   return (
     <div className="h-full flex flex-col bg-zinc-50 dark:bg-zinc-900 rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-800">
-      <div className="p-4 border-b border-zinc-200 dark:border-zinc-800">
-        <h1 className="text-xl font-semibold">대화 목록</h1>
+      <div className="p-3 border-b border-zinc-200 dark:border-zinc-800">
+        <h1 className="text-base font-semibold">대화 목록</h1>
       </div>
 
-      <div className="p-4">
+      <div className="p-3">
         <Button
           onClick={onNewChat}
-          className="w-full mb-4 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700"
+          size="sm"
+          className="w-full mb-3 flex items-center justify-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-xs h-8"
         >
-          <Plus size={18} />
+          <Plus size={14} />
           <span>새로운 대화</span>
         </Button>
       </div>
 
-      <div className="overflow-y-auto flex-grow p-4 pt-0">
+      <div className="overflow-y-auto flex-grow p-3 pt-0">
         {isLoading ? (
-          <div className="flex items-center justify-center h-32">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+          <div className="flex items-center justify-center h-24">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div>
           </div>
         ) : conversations.length === 0 ? (
-          <div className="text-center py-8 text-zinc-500 dark:text-zinc-400">
-            <p>대화 내역이 없습니다.</p>
-            <p className="text-sm mt-2">새로운 대화를 시작해보세요.</p>
+          <div className="text-center py-6 text-zinc-500 dark:text-zinc-400">
+            <p className="text-xs">대화 내역이 없습니다.</p>
+            <p className="text-xs mt-1.5">새로운 대화를 시작해보세요.</p>
           </div>
         ) : (
           <ul className="space-y-2">
@@ -84,12 +85,12 @@ const ConversationList = ({
               <li key={conversation.id} className="group">
                 {editingId === conversation.id ? (
                   // 이름 편집 모드
-                  <div className="w-full p-3 rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center">
+                  <div className="w-full p-2 rounded-md bg-zinc-100 dark:bg-zinc-800 flex items-center">
                     <input
                       type="text"
                       value={newTitle}
                       onChange={(e) => setNewTitle(e.target.value)}
-                      className="flex-grow bg-transparent border-none focus:outline-none focus:ring-0 text-sm"
+                      className="flex-grow bg-transparent border-none focus:outline-none focus:ring-0 text-xs"
                       autoFocus
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
@@ -103,7 +104,7 @@ const ConversationList = ({
                     <Button
                       size="sm"
                       onClick={() => saveTitle(conversation.id)}
-                      className="ml-2 px-2 h-7 bg-indigo-600 hover:bg-indigo-700"
+                      className="ml-2 px-2 h-6 text-xs bg-indigo-600 hover:bg-indigo-700"
                     >
                       저장
                     </Button>
@@ -111,7 +112,7 @@ const ConversationList = ({
                       variant="secondary"
                       size="sm"
                       onClick={() => setEditingId(null)}
-                      className="ml-1 px-2 h-7"
+                      className="ml-1 px-2 h-6 text-xs"
                     >
                       취소
                     </Button>
@@ -121,12 +122,12 @@ const ConversationList = ({
                   <div className="flex w-full items-center">
                     <Link
                       href={`/chat/${conversation.id}`}
-                      className="flex-grow text-left p-3 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors block"
+                      className="flex-grow text-left p-2 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors block"
                     >
-                      <div className="font-medium truncate">
+                      <div className="text-xs font-medium truncate">
                         {conversation.title}
                       </div>
-                      <div className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                      <div className="text-[10px] text-zinc-500 dark:text-zinc-400 mt-0.5">
                         {formatDistanceToNow(
                           new Date(conversation.lastActive),
                           {
@@ -136,30 +137,30 @@ const ConversationList = ({
                         )}
                       </div>
                     </Link>
-                    <div className="flex opacity-0 group-hover:opacity-100 transition-opacity pr-2">
+                    <div className="flex opacity-0 group-hover:opacity-100 transition-opacity pr-1">
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8"
+                        className="h-6 w-6"
                         onClick={(e) => {
                           e.preventDefault();
                           startEditing(conversation.id, conversation.title);
                         }}
                         title="이름 변경"
                       >
-                        <Edit2 size={15} />
+                        <Edit2 size={12} />
                       </Button>
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
+                        className="h-6 w-6 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
                         onClick={(e) => {
                           e.preventDefault();
                           confirmDelete(conversation.id);
                         }}
                         title="삭제"
                       >
-                        <Trash2 size={15} />
+                        <Trash2 size={12} />
                       </Button>
                     </div>
                   </div>
@@ -252,15 +253,15 @@ export default function ChatWindow({
           {/* 채팅 영역 - 모바일에서는 전체 너비, 데스크탑에서는 2/3 */}
           <div className="h-full lg:col-span-2 flex flex-col bg-zinc-50 dark:bg-zinc-900 rounded-xl overflow-hidden border border-zinc-200 dark:border-zinc-800">
             {/* 채팅 헤더 */}
-            <div className="flex items-center p-4 border-b border-zinc-200 dark:border-zinc-800">
+            <div className="flex items-center p-3 border-b border-zinc-200 dark:border-zinc-800">
               <Link
                 href="/chat"
                 className="p-1 mr-2 rounded-full hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
               >
-                <ArrowLeft size={20} />
+                <ArrowLeft size={16} />
               </Link>
               <h1
-                className="text-lg font-semibold truncate flex-grow cursor-pointer hover:text-indigo-600 transition-colors"
+                className="text-sm font-semibold truncate flex-grow cursor-pointer hover:text-indigo-600 transition-colors"
                 onClick={() => {
                   if (conversationId) {
                     const newTitle = window.prompt(
@@ -279,7 +280,7 @@ export default function ChatWindow({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
+                className="h-6 w-6 text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30"
                 onClick={() => {
                   if (
                     conversationId &&
@@ -290,12 +291,12 @@ export default function ChatWindow({
                 }}
                 title="대화 삭제"
               >
-                <Trash2 size={16} />
+                <Trash2 size={14} />
               </Button>
             </div>
 
             {/* 채팅 히스토리 */}
-            <div className="p-6 overflow-y-auto grow">
+            <div className="p-4 overflow-y-auto grow">
               <ChatMessageList
                 messages={messages}
                 streamingMessage={streamingMessage}
@@ -318,9 +319,9 @@ export default function ChatWindow({
                 <StockChart subgraphData={subgraphData} />
               </>
             ) : (
-              <div className="flex items-center justify-center h-full rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 p-6">
+              <div className="flex items-center justify-center h-full rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-900 p-4">
                 <div className="text-center">
-                  <p className="text-zinc-500 dark:text-zinc-400">
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
                     주식 관련 질문을 하시면
                     <br />
                     상세 정보가 여기에 표시됩니다.

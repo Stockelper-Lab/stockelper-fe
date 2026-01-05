@@ -16,11 +16,11 @@ interface ChatMessageListProps {
 export function ChatEmptyState() {
   return (
     <div className="flex h-full items-center justify-center text-center">
-      <div className="max-w-md p-8">
-        <p className="text-lg font-bold text-zinc-800 dark:text-zinc-200">
+      <div className="max-w-md p-6">
+        <p className="text-sm font-bold text-zinc-800 dark:text-zinc-200">
           STOCKELPER AI 어시스턴트
         </p>
-        <p className="text-sm mt-2 text-zinc-500 dark:text-zinc-400">
+        <p className="text-xs mt-1.5 text-zinc-500 dark:text-zinc-400">
           주식 투자에 관한 질문을 해보세요. 최신 투자 정보를 LLM을 통해 빠르게
           받아보세요.
         </p>
@@ -222,14 +222,14 @@ export function ChatMessageList({
   });
 
   return (
-    <div className="space-y-6" ref={containerRef}>
+    <div className="space-y-4" ref={containerRef}>
       {/* 로딩 인디케이터 및 트리거 영역 */}
       {hasMore && (
-        <div ref={loadMoreTriggerRef} className="py-2 text-center">
+        <div ref={loadMoreTriggerRef} className="py-1.5 text-center">
           {isLoadingMore ? (
-            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-indigo-600 mx-auto"></div>
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-indigo-600 mx-auto"></div>
           ) : (
-            <div className="text-xs text-zinc-400">
+            <div className="text-[10px] text-zinc-400">
               위로 스크롤하면 이전 메시지를 불러옵니다
             </div>
           )}

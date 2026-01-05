@@ -29,13 +29,13 @@ export function ChatInput({ onSendMessage, isLoading }: ChatInputProps) {
   };
 
   return (
-    <div className="border-t border-zinc-200 dark:border-zinc-800 p-4">
-      <div className="flex items-end relative rounded-xl bg-white dark:bg-zinc-800/70 border border-zinc-200 dark:border-zinc-700 shadow-sm px-4 py-2">
+    <div className="border-t border-zinc-200 dark:border-zinc-800 p-3">
+      <div className="flex items-end relative rounded-lg bg-white dark:bg-zinc-800/70 border border-zinc-200 dark:border-zinc-700 shadow-sm px-3 py-1.5">
         <Textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="메시지를 입력하세요..."
-          className="min-h-[48px] resize-none border-none bg-transparent focus-visible:ring-0 focus-visible:outline-none shadow-none p-0 py-3 text-zinc-800 dark:text-zinc-200 placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
+          className="min-h-[36px] resize-none border-none bg-transparent focus-visible:ring-0 focus-visible:outline-none shadow-none p-0 py-2 text-xs text-zinc-800 dark:text-zinc-200 placeholder:text-zinc-400 dark:placeholder:text-zinc-500"
           onCompositionStart={() => setIsComposing(true)}
           onCompositionEnd={() => {
             setIsComposing(false);
@@ -55,9 +55,9 @@ export function ChatInput({ onSendMessage, isLoading }: ChatInputProps) {
         <Button
           onClick={handleSendMessage}
           disabled={isLoading || !input.trim()}
-          className="rounded-full h-[38px] w-[38px] p-0 bg-primary hover:bg-primary/90 flex items-center justify-center shrink-0"
+          className="rounded-full h-[32px] w-[32px] p-0 bg-primary hover:bg-primary/90 flex items-center justify-center shrink-0"
         >
-          <Send size={16} className="text-primary-foreground" />
+          <Send size={14} className="text-primary-foreground" />
         </Button>
       </div>
     </div>

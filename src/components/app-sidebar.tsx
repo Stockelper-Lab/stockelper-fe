@@ -1,6 +1,6 @@
 "use client";
 
-import { LayoutDashboard, MessageSquare, Settings } from "lucide-react";
+import { LayoutDashboard, MessageSquare, Settings, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -29,6 +29,11 @@ const navItems = [
     name: "AI 어시스턴트",
     href: "/chat",
     icon: MessageSquare,
+  },
+  {
+    name: "포트폴리오 추천",
+    href: "/portfolio",
+    icon: TrendingUp,
   },
   {
     name: "설정",

@@ -50,7 +50,7 @@ export function ChatMessage({ message, onFeedback }: ChatMessageProps) {
 
   return (
     <div className={`flex ${alignment}`}>
-      <div className={`max-w-[80%] rounded-2xl p-4 ${containerStyle}`}>
+      <div className={`max-w-[85%] rounded-xl p-3 ${containerStyle}`}>
         {message.role === "user" || message.role === "question" ? (
           // User messages and active Question messages are rendered as plain text <p>
           <p className={textStyle}>{message.content}</p>
@@ -60,17 +60,17 @@ export function ChatMessage({ message, onFeedback }: ChatMessageProps) {
         )}
 
         {showButtons && onFeedback && (
-          <div className="mt-5 pt-3 border-t border-amber-200 dark:border-amber-700 flex justify-end gap-3">
+          <div className="mt-3 pt-2 border-t border-amber-200 dark:border-amber-700 flex justify-end gap-2">
             <button
               onClick={() => handleFeedbackClick(true)}
-              className={`px-5 py-2 text-sm font-semibold rounded-lg transition-all duration-150 ease-in-out shadow-md hover:shadow-lg transform hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-opacity-50 
+              className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-150 ease-in-out shadow-sm hover:shadow-md transform hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-opacity-50 
                          bg-green-500/30 hover:bg-green-500/50 active:bg-green-500/70 text-green-800 dark:text-green-100 border border-green-500/50 dark:border-green-400/70 backdrop-blur-md focus:ring-green-500`}
             >
               예, 진행합니다
             </button>
             <button
               onClick={() => handleFeedbackClick(false)}
-              className={`px-5 py-2 text-sm font-semibold rounded-lg transition-all duration-150 ease-in-out shadow-md hover:shadow-lg transform hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-opacity-50 
+              className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all duration-150 ease-in-out shadow-sm hover:shadow-md transform hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-opacity-50 
                          bg-red-500/30 hover:bg-red-500/50 active:bg-red-500/70 text-red-800 dark:text-red-100 border border-red-500/50 dark:border-red-400/70 backdrop-blur-md focus:ring-red-500`}
             >
               아니오
@@ -89,7 +89,7 @@ export function ChatMessage({ message, onFeedback }: ChatMessageProps) {
             </div>
           )}
 
-        <p className="mt-1.5 text-right text-xs opacity-70">
+        <p className="mt-1 text-right text-[10px] opacity-60">
           {new Date(message.timestamp).toLocaleTimeString()}
         </p>
       </div>
