@@ -5,7 +5,7 @@ const BacktestingPage = () => {
     <div className="h-full flex flex-col">
       {/* 헤더 */}
       <div className="flex items-center gap-3 px-6 py-4 border-b border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800/50 flex-shrink-0">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-zinc-500 to-zinc-700 flex items-center justify-center shadow-lg shadow-zinc-500/20">
+      <div className="size-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shadow-lg shadow-blue-500/20">
           <ComputerIcon className="w-5 h-5 text-white" />
         </div>
         <div>
