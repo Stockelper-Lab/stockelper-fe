@@ -1,6 +1,6 @@
 "use client";
 
-import { LayoutDashboard, LogOut, MessageSquare, Settings, TrendingUp } from "lucide-react";
+import { ChartLine, LayoutDashboard, LogOut, MessageSquare, Settings, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -36,6 +36,11 @@ const navItems = [
     name: "포트폴리오 추천",
     href: "/portfolio",
     icon: TrendingUp,
+  },
+  {
+    name: "백테스팅",
+    href: "/backtesting",
+    icon: ChartLine,
   },
   {
     name: "설정",
