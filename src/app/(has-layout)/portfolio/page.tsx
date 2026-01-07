@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { Pagination } from "@/components/ui/pagination";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useUser } from "@/hooks/use-user";
 import {
@@ -18,7 +19,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 // 스켈레톤 컴포넌트
 function PortfolioSkeleton() {
@@ -70,12 +71,34 @@ function PortfolioSkeleton() {
   );
 }
 
+const ITEMS_PER_PAGE = 10;
+
 export default function PortfolioPage() {
   const { user, loading: userLoading } = useUser();
   const [history, setHistory] = useState<PortfolioRecommendationHistory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
   const router = useRouter();
+
+  // 페이지네이션 계산
+  const totalPages = useMemo(
+    () => Math.ceil(history.length / ITEMS_PER_PAGE),
+    [history.length]
+  );
+
+  const paginatedHistory = useMemo(() => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    return history.slice(startIndex, endIndex);
+  }, [history, currentPage]);
+
+  // 페이지 변경 시 상단으로 스크롤
+  useEffect(() => {
+    if (currentPage > 1) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, [currentPage]);
   // 이력 로드
   useEffect(() => {
     if (user && !userLoading) {
@@ -107,6 +130,7 @@ export default function PortfolioPage() {
       // 목록 갱신
       const loadedHistory = await getPortfolioRecommendationHistory();
       setHistory(loadedHistory);
+      setCurrentPage(1); // 새 추천 요청 시 첫 페이지로 이동
     } catch (err) {
       console.error("포트폴리오 추천 요청 실패:", err);
       setError(
@@ -186,96 +210,109 @@ export default function PortfolioPage() {
             </Button>
           </div>
         ) : (
-          // 포트폴리오 이력 목록 (테이블 형식)
-          <div className="bg-white dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700 overflow-hidden shadow-sm">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900/50">
-                  <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                    상태
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                    생성일시
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                    투자자 유형
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                    진행상태
-                  </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
-                    액션
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-200 dark:divide-zinc-700 bg-white dark:bg-zinc-800">
-                {history.map((portfolio) => {
-                  const dateStr = format(
-                    new Date(portfolio.createdAt),
-                    "yyyy년 MM월 dd일 HH:mm",
-                    { locale: ko }
-                  );
-                  const isProcessing = !portfolio.result || portfolio.result.trim() === "";
+          <>
+            {/* 포트폴리오 이력 목록 (테이블 형식) */}
+            <div className="bg-white dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700 overflow-hidden shadow-sm">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900/50">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                      상태
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                      생성일시
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                      투자자 유형
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                      진행상태
+                    </th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                      액션
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-200 dark:divide-zinc-700 bg-white dark:bg-zinc-800">
+                  {paginatedHistory.map((portfolio) => {
+                    const dateStr = format(
+                      new Date(portfolio.createdAt),
+                      "yyyy년 MM월 dd일 HH:mm",
+                      { locale: ko }
+                    );
+                    const isProcessing = !portfolio.result || portfolio.result.trim() === "";
 
-                  return (
-                      <tr className="hover:bg-zinc-50 dark:hover:bg-zinc-900/30 transition-colors cursor-pointer group" onClick={() => router.push(`/portfolio/${portfolio.id}`)}>
-                        {/* 상태 아이콘 */}
-                        <td className="px-4 py-3">
-                          <div className="w-8 h-8 rounded-md bg-gradient-to-br from-amber-100 to-orange-100 dark:from-amber-900/50 dark:to-orange-900/50 flex items-center justify-center">
+                    return (
+                        <tr key={portfolio.id} className="hover:bg-zinc-50 dark:hover:bg-zinc-900/30 transition-colors cursor-pointer group" onClick={() => router.push(`/portfolio/${portfolio.id}`)}>
+                          {/* 상태 아이콘 */}
+                          <td className="px-4 py-3">
+                            <div className="w-8 h-8 rounded-md bg-gradient-to-br from-amber-100 to-orange-100 dark:from-amber-900/50 dark:to-orange-900/50 flex items-center justify-center">
+                              {isProcessing ? (
+                                <Loader2
+                                  size={16}
+                                  className="text-amber-600 dark:text-amber-400 animate-spin"
+                                />
+                              ) : (
+                                <TrendingUp
+                                  size={16}
+                                  className="text-amber-600 dark:text-amber-400"
+                                />
+                              )}
+                            </div>
+                          </td>
+
+                          {/* 생성일시 */}
+                          <td className="px-4 py-3">
+                            <span className="text-sm text-zinc-900 dark:text-zinc-100">
+                              {dateStr}
+                            </span>
+                          </td>
+
+                          {/* 투자자 유형 */}
+                          <td className="px-4 py-3">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300">
+                              {portfolio.investorType}
+                            </span>
+                          </td>
+
+                          {/* 진행상태 */}
+                          <td className="px-4 py-3">
                             {isProcessing ? (
-                              <Loader2
-                                size={16}
-                                className="text-amber-600 dark:text-amber-400 animate-spin"
-                              />
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300">
+                                분석 중
+                              </span>
                             ) : (
-                              <TrendingUp
-                                size={16}
-                                className="text-amber-600 dark:text-amber-400"
-                              />
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300">
+                                완료
+                              </span>
                             )}
-                          </div>
-                        </td>
+                          </td>
 
-                        {/* 생성일시 */}
-                        <td className="px-4 py-3">
-                          <span className="text-sm text-zinc-900 dark:text-zinc-100">
-                            {dateStr}
-                          </span>
-                        </td>
+                          {/* 액션 */}
+                          <td className="px-4 py-3 text-right">
+                            <ArrowRight
+                              size={16}
+                              className="text-zinc-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors ml-auto inline-block"
+                            />
+                          </td>
+                        </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
 
-                        {/* 투자자 유형 */}
-                        <td className="px-4 py-3">
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300">
-                            {portfolio.investorType}
-                          </span>
-                        </td>
-
-                        {/* 진행상태 */}
-                        <td className="px-4 py-3">
-                          {isProcessing ? (
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300">
-                              분석 중
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300">
-                              완료
-                            </span>
-                          )}
-                        </td>
-
-                        {/* 액션 */}
-                        <td className="px-4 py-3 text-right">
-                          <ArrowRight
-                            size={16}
-                            className="text-zinc-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors ml-auto inline-block"
-                          />
-                        </td>
-                      </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+            {/* 페이지네이션 */}
+            {totalPages > 1 && (
+              <div className="mt-6 flex justify-center">
+                <Pagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={setCurrentPage}
+                />
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
