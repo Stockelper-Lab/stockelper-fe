@@ -1,12 +1,14 @@
 "use client";
 
-import { LayoutDashboard, MessageSquare, Settings, TrendingUp } from "lucide-react";
+import { LayoutDashboard, LogOut, MessageSquare, Settings, TrendingUp } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -17,6 +19,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
+import { useUser } from "@/hooks/use-user";
 
 // 메뉴 아이템 정의
 const navItems = [
@@ -45,6 +48,19 @@ const navItems = [
 export function AppSidebar() {
   const pathname = usePathname();
   const { open, setOpen } = useSidebar();
+  const { logout } = useUser();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const handleLogout = async () => {
+    try {
+      setIsLoggingOut(true);
+      await logout();
+    } catch (error) {
+      console.error("로그아웃 중 오류가 발생했습니다:", error);
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
 
   return (
     <Sidebar collapsible="icon" className="w-[240px] h-full border-none">
@@ -63,8 +79,8 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {navItems.map((item) => {
-                // 현재 경로가 메뉴 항목의 href와 일치하는지 확인
-                const isActive = pathname === item.href;
+                // 현재 경로가 메뉴 항목의 href와 일치하거나 하위 경로인지 확인
+                const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
                 return (
                   <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton
@@ -88,6 +104,25 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
+      <SidebarFooter className={cn("px-2 pb-4", !open && "px-0")}>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              asChild
+              onClick={handleLogout}
+              disabled={isLoggingOut}
+              className="my-1 rounded-xl text-zinc-600 dark:text-zinc-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <button className="px-4 py-2.5">
+                <LogOut className="w-[18px] h-[18px]" />
+                <span className="ml-3 text-sm">
+                  {isLoggingOut ? "로그아웃 중..." : "로그아웃"}
+                </span>
+              </button>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
     </Sidebar>
   );
 }
