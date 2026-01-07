@@ -8,7 +8,6 @@ import { useState } from "react";
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -16,10 +15,10 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  useSidebar,
+  useSidebar
 } from "@/components/ui/sidebar";
-import { cn } from "@/lib/utils";
 import { useUser } from "@/hooks/use-user";
+import { cn } from "@/lib/utils";
 
 // 메뉴 아이템 정의
 const navItems = [
@@ -100,29 +99,25 @@ export function AppSidebar() {
                   </SidebarMenuItem>
                 );
               })}
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  onClick={handleLogout}
+                  disabled={isLoggingOut}
+                  className="my-1 rounded-xl text-zinc-600 dark:text-zinc-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <button className="px-4 py-2.5">
+                    <LogOut className="w-[18px] h-[18px]" />
+                    <span className="ml-3 text-sm">
+                      {isLoggingOut ? "로그아웃 중..." : "로그아웃"}
+                    </span>
+                  </button>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className={cn("px-2 pb-4", !open && "px-0")}>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              asChild
-              onClick={handleLogout}
-              disabled={isLoggingOut}
-              className="my-1 rounded-xl text-zinc-600 dark:text-zinc-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <button className="px-4 py-2.5">
-                <LogOut className="w-[18px] h-[18px]" />
-                <span className="ml-3 text-sm">
-                  {isLoggingOut ? "로그아웃 중..." : "로그아웃"}
-                </span>
-              </button>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarFooter>
     </Sidebar>
   );
 }
