@@ -17,40 +17,65 @@ import {
   RefreshCw,
   TrendingUp,
 } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 
 // 스켈레톤 컴포넌트
 function PortfolioSkeleton() {
   return (
-    <div className="space-y-3">
-      {[1, 2, 3].map((i) => (
-        <div
-          key={i}
-          className="p-4 rounded-xl bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700"
-        >
-          <div className="flex items-center gap-3">
-            <Skeleton className="w-12 h-12 rounded-lg" />
-            <div className="flex-1 space-y-2">
-              <Skeleton className="h-4 w-1/2" />
-              <Skeleton className="h-3 w-1/4" />
-            </div>
-          </div>
-        </div>
-      ))}
+    <div className="bg-white dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700 overflow-hidden">
+      <table className="w-full">
+        <thead>
+          <tr className="border-b border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900/50">
+            <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+              상태
+            </th>
+            <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+              생성일시
+            </th>
+            <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+              투자자 유형
+            </th>
+            <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+              진행상태
+            </th>
+            <th className="px-4 py-3 text-right text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+              액션
+            </th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-zinc-200 dark:divide-zinc-700">
+          {[1, 2, 3].map((i) => (
+            <tr key={i} className="hover:bg-zinc-50 dark:hover:bg-zinc-900/30 transition-colors">
+              <td className="px-4 py-3">
+                <Skeleton className="w-8 h-8 rounded" />
+              </td>
+              <td className="px-4 py-3">
+                <Skeleton className="h-4 w-32" />
+              </td>
+              <td className="px-4 py-3">
+                <Skeleton className="h-4 w-20" />
+              </td>
+              <td className="px-4 py-3">
+                <Skeleton className="h-4 w-16" />
+              </td>
+              <td className="px-4 py-3 text-right">
+                <Skeleton className="h-4 w-4 ml-auto" />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
 
 export default function PortfolioPage() {
   const { user, loading: userLoading } = useUser();
-  const router = useRouter();
   const [history, setHistory] = useState<PortfolioRecommendationHistory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isRequesting, setIsRequesting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
+  const router = useRouter();
   // 이력 로드
   useEffect(() => {
     if (user && !userLoading) {
@@ -69,19 +94,19 @@ export default function PortfolioPage() {
     }
   }, [user, userLoading]);
 
-  // 새 추천 요청 (2개 병렬 처리)
+  // 새 추천 요청
   const handleRequestRecommendation = useCallback(async () => {
     if (!user) return;
 
-    setIsRequesting(true);
     setError(null);
 
     try {
-      // 1개의 추천만 요청
-      const recommendation = await requestPortfolioRecommendation();
+      // 서버에서 pending 상태로 추가
+      await requestPortfolioRecommendation();
       
-      // 첫 번째 추천 상세 페이지로 이동
-      router.push(`/portfolio/${recommendation.id}`);
+      // 목록 갱신
+      const loadedHistory = await getPortfolioRecommendationHistory();
+      setHistory(loadedHistory);
     } catch (err) {
       console.error("포트폴리오 추천 요청 실패:", err);
       setError(
@@ -89,9 +114,8 @@ export default function PortfolioPage() {
           ? err.message
           : "포트폴리오 추천을 받는 중 오류가 발생했습니다."
       );
-      setIsRequesting(false);
     }
-  }, [user, router]);
+  }, [user]);
 
   return (
     <div className="h-full flex flex-col">
@@ -114,20 +138,11 @@ export default function PortfolioPage() {
         </div>
         <Button
           onClick={handleRequestRecommendation}
-          disabled={isRequesting || !user}
+          disabled={!user}
           className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-500/20 disabled:opacity-50"
         >
-          {isRequesting ? (
-            <>
-              <Loader2 size={16} className="animate-spin" />
-              <span className="hidden sm:inline">분석 중...</span>
-            </>
-          ) : (
-            <>
-              <RefreshCw size={16} />
-              <span className="hidden sm:inline">새 추천 받기</span>
-            </>
-          )}
+          <RefreshCw size={16} />
+          <span className="hidden sm:inline">새 추천 받기</span>
         </Button>
       </div>
 
@@ -164,80 +179,102 @@ export default function PortfolioPage() {
             </p>
             <Button
               onClick={handleRequestRecommendation}
-              disabled={isRequesting}
               className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 shadow-md shadow-indigo-500/20"
             >
-              {isRequesting ? (
-                <>
-                  <Loader2 size={18} className="mr-2 animate-spin" />
-                  분석 중...
-                </>
-              ) : (
-                <>
-                  <RefreshCw size={18} className="mr-2" />
-                  포트폴리오 추천 받기
-                </>
-              )}
+              <RefreshCw size={18} className="mr-2" />
+              포트폴리오 추천 받기
             </Button>
           </div>
         ) : (
-          // 포트폴리오 이력 목록
-          <div className="space-y-3">
-            {history.map((portfolio) => {
-              const dateStr = format(
-                new Date(portfolio.createdAt),
-                "yyyy년 MM월 dd일 HH:mm",
-                { locale: ko }
-              );
-              const isProcessing = !portfolio.result || portfolio.result.trim() === "";
+          // 포트폴리오 이력 목록 (테이블 형식)
+          <div className="bg-white dark:bg-zinc-800 rounded-lg border border-zinc-200 dark:border-zinc-700 overflow-hidden shadow-sm">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900/50">
+                  <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                    상태
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                    생성일시
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                    투자자 유형
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                    진행상태
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">
+                    액션
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-200 dark:divide-zinc-700 bg-white dark:bg-zinc-800">
+                {history.map((portfolio) => {
+                  const dateStr = format(
+                    new Date(portfolio.createdAt),
+                    "yyyy년 MM월 dd일 HH:mm",
+                    { locale: ko }
+                  );
+                  const isProcessing = !portfolio.result || portfolio.result.trim() === "";
 
-              return (
-                <Link key={portfolio.id} href={`/portfolio/${portfolio.id}`}>
-                  <div className="group flex items-center gap-4 p-4 rounded-xl bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 hover:border-indigo-300 dark:hover:border-indigo-700 hover:shadow-lg transition-all cursor-pointer">
-                    {/* 아이콘 */}
-                    <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-amber-100 to-orange-100 dark:from-amber-900/50 dark:to-orange-900/50 flex items-center justify-center flex-shrink-0">
-                      {isProcessing ? (
-                        <Loader2
-                          size={22}
-                          className="text-amber-600 dark:text-amber-400 animate-spin"
-                        />
-                      ) : (
-                        <TrendingUp
-                          size={22}
-                          className="text-amber-600 dark:text-amber-400"
-                        />
-                      )}
-                    </div>
+                  return (
+                      <tr className="hover:bg-zinc-50 dark:hover:bg-zinc-900/30 transition-colors cursor-pointer group" onClick={() => router.push(`/portfolio/${portfolio.id}`)}>
+                        {/* 상태 아이콘 */}
+                        <td className="px-4 py-3">
+                          <div className="w-8 h-8 rounded-md bg-gradient-to-br from-amber-100 to-orange-100 dark:from-amber-900/50 dark:to-orange-900/50 flex items-center justify-center">
+                            {isProcessing ? (
+                              <Loader2
+                                size={16}
+                                className="text-amber-600 dark:text-amber-400 animate-spin"
+                              />
+                            ) : (
+                              <TrendingUp
+                                size={16}
+                                className="text-amber-600 dark:text-amber-400"
+                              />
+                            )}
+                          </div>
+                        </td>
 
-                    {/* 내용 */}
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-medium text-zinc-900 dark:text-zinc-100 text-sm group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                        포트폴리오 추천
-                      </h3>
-                      <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
-                        {dateStr}
-                      </p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <p className="text-xs text-indigo-600 dark:text-indigo-400">
-                          {portfolio.investorType}
-                        </p>
-                        {isProcessing && (
-                          <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">
-                            • 분석 중
+                        {/* 생성일시 */}
+                        <td className="px-4 py-3">
+                          <span className="text-sm text-zinc-900 dark:text-zinc-100">
+                            {dateStr}
                           </span>
-                        )}
-                      </div>
-                    </div>
+                        </td>
 
-                    {/* 화살표 */}
-                    <ArrowRight
-                      size={18}
-                      className="text-zinc-400 group-hover:text-indigo-500 transition-colors"
-                    />
-                  </div>
-                </Link>
-              );
-            })}
+                        {/* 투자자 유형 */}
+                        <td className="px-4 py-3">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300">
+                            {portfolio.investorType}
+                          </span>
+                        </td>
+
+                        {/* 진행상태 */}
+                        <td className="px-4 py-3">
+                          {isProcessing ? (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300">
+                              분석 중
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300">
+                              완료
+                            </span>
+                          )}
+                        </td>
+
+                        {/* 액션 */}
+                        <td className="px-4 py-3 text-right">
+                          <ArrowRight
+                            size={16}
+                            className="text-zinc-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors ml-auto inline-block"
+                          />
+                        </td>
+                      </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
