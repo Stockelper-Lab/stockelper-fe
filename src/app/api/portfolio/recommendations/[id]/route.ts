@@ -2,7 +2,7 @@ import { validateSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 
-const FORCE_ID_MODE = true;
+const FORCE_ID_MODE = false;
 const FORCE_ID = 4;
 
 // 특정 포트폴리오 추천 조회

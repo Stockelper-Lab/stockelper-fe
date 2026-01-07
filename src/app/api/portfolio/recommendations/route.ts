@@ -2,7 +2,7 @@ import { validateSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 
-const FORCE_ID_MODE = true;
+const FORCE_ID_MODE = false;
 const FORCE_ID = 4;
 
 // 포트폴리오 추천 API 호출 (백엔드 서버가 DB row를 생성함)
