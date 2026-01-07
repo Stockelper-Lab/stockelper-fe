@@ -2,6 +2,9 @@ import { validateSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 
+const FORCE_ID_MODE = true;
+const FORCE_ID = 4;
+
 // 포트폴리오 추천 API 호출 (백엔드 서버가 DB row를 생성함)
 export async function POST(req: NextRequest) {
   try {
@@ -24,7 +27,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const userIdNum = parseInt(userId, 10);
+    const userIdNum = FORCE_ID_MODE ? FORCE_ID : parseInt(userId, 10);
 
     // 환경 변수에서 포트폴리오 서버 엔드포인트 가져오기
     const PORTFOLIO_ENDPOINT = process.env.PORTFOLIO_ENDPOINT || "http://220.86.116.160:21008";
@@ -36,7 +39,7 @@ export async function POST(req: NextRequest) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        user_id: 4,
+        user_id: userIdNum,
       }),
     });
 
@@ -86,7 +89,7 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const userIdNum = parseInt(userId, 10);
+    const userIdNum = FORCE_ID_MODE ? FORCE_ID : parseInt(userId, 10);
 
     // 데이터베이스에서 조회
     const recommendations = await prisma.portfolioRecommendation.findMany({

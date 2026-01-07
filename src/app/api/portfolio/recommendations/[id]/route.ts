@@ -2,10 +2,13 @@ import { validateSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 
+const FORCE_ID_MODE = true;
+const FORCE_ID = 4;
+
 // 특정 포트폴리오 추천 조회
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // 세션에서 userId 가져오기
@@ -27,8 +30,8 @@ export async function GET(
       );
     }
 
-    const userIdNum = parseInt(userId, 10);
-    const recommendationId = params.id;
+    const userIdNum = FORCE_ID_MODE ? FORCE_ID : parseInt(userId, 10);
+    const recommendationId = (await params).id;
 
     // 데이터베이스에서 조회
     const recommendation = await prisma.portfolioRecommendation.findUnique({
@@ -45,7 +48,7 @@ export async function GET(
     }
 
     // 본인의 추천인지 확인
-    if (recommendation.userId !== userIdNum) {
+    if (!FORCE_ID_MODE && recommendation.userId !== userIdNum) {
       return NextResponse.json(
         { error: "권한이 없습니다." },
         { status: 403 }

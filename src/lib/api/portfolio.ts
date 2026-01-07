@@ -18,19 +18,12 @@ export interface PortfolioRecommendationHistory {
 }
 
 // 포트폴리오 추천 요청 (데이터베이스에 저장됨)
-export async function requestPortfolioRecommendation(
-  userId: number,
-  jobId?: string | null
-): Promise<PortfolioRecommendationResponse> {
+export async function requestPortfolioRecommendation(): Promise<PortfolioRecommendationResponse> {
   const response = await fetch("/api/portfolio/recommendations", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ 
-      user_id: userId,
-      job_id: jobId || null,
-    }),
   });
 
   if (!response.ok) {
@@ -44,9 +37,7 @@ export async function requestPortfolioRecommendation(
 }
 
 // 포트폴리오 추천 이력 가져오기 (데이터베이스에서)
-export async function getPortfolioRecommendationHistory(
-  userId: number
-): Promise<PortfolioRecommendationHistory[]> {
+export async function getPortfolioRecommendationHistory(): Promise<PortfolioRecommendationHistory[]> {
   const response = await fetch("/api/portfolio/recommendations", {
     method: "GET",
     headers: {

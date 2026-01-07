@@ -4,9 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useUser } from "@/hooks/use-user";
 import {
-  requestPortfolioRecommendation,
   getPortfolioRecommendationHistory,
   PortfolioRecommendationHistory,
+  requestPortfolioRecommendation,
 } from "@/lib/api/portfolio";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
@@ -56,7 +56,7 @@ export default function PortfolioPage() {
     if (user && !userLoading) {
       const loadHistory = async () => {
         try {
-          const loadedHistory = await getPortfolioRecommendationHistory(user.id);
+          const loadedHistory = await getPortfolioRecommendationHistory();
           setHistory(loadedHistory);
         } catch (err) {
           console.error("포트폴리오 추천 이력 로드 실패:", err);
@@ -77,14 +77,11 @@ export default function PortfolioPage() {
     setError(null);
 
     try {
-      // 2개의 요청을 병렬로 처리
-      const [recommendation1, recommendation2] = await Promise.all([
-        requestPortfolioRecommendation(user.id),
-        requestPortfolioRecommendation(user.id),
-      ]);
+      // 1개의 추천만 요청
+      const recommendation = await requestPortfolioRecommendation();
       
       // 첫 번째 추천 상세 페이지로 이동
-      router.push(`/portfolio/${recommendation1.id}`);
+      router.push(`/portfolio/${recommendation.id}`);
     } catch (err) {
       console.error("포트폴리오 추천 요청 실패:", err);
       setError(
