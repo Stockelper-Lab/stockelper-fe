@@ -9,7 +9,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChatInput } from "./chat-input";
 import { ChatMessageList } from "./chat-message-list";
 import { ConversationList } from "./conversation-list";
-import { StockForceGraph } from "./stock-force-graph";
+import dynamic from "next/dynamic";
+
+// react-force-graph-2d가 window 객체를 참조하므로 SSR 비활성화
+const StockForceGraph = dynamic(
+  () => import("./stock-force-graph").then((mod) => mod.StockForceGraph),
+  { ssr: false }
+);
 import { Message } from "./types";
 import { TypingTitle } from "./typing-title";
 import { useChatBot } from "./use-chat";
