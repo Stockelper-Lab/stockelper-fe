@@ -5,7 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { ArrowLeft, Edit2, Network, PanelRightClose, PanelRightOpen, Trash2 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChatInput } from "./chat-input";
 import { ChatMessageList } from "./chat-message-list";
 import { ConversationList } from "./conversation-list";
@@ -88,7 +88,7 @@ export default function ChatWindow({
     sendMessage,
     handleFeedback,
     isLoading,
-    subgraphData,
+    subgraphData: latestSubgraphData,
     showChatList,
     conversations,
     currentChatTitle,
@@ -109,6 +109,34 @@ export default function ChatWindow({
 
   // 네트워크 패널 토글 상태
   const [isNetworkOpen, setIsNetworkOpen] = useState(false);
+
+  // 메시지 단위 서브그래프 선택(과거 응답 다시 보기)
+  const [selectedSubgraphMessageId, setSelectedSubgraphMessageId] = useState<
+    string | null
+  >(null);
+
+  const selectedSubgraphData = useMemo(() => {
+    if (!selectedSubgraphMessageId) return null;
+    const msg = messages.find((m) => m.id === selectedSubgraphMessageId);
+    return msg?.subgraph ?? null;
+  }, [messages, selectedSubgraphMessageId]);
+
+  // 기본은 최신 서브그래프, 선택이 있으면 선택된 메시지의 서브그래프를 표시
+  const displayedSubgraphData = selectedSubgraphData ?? latestSubgraphData;
+
+  // 선택된 메시지가 사라졌거나(subgraph가 없거나) 유효하지 않으면 선택 해제
+  useEffect(() => {
+    if (!selectedSubgraphMessageId) return;
+    const msg = messages.find((m) => m.id === selectedSubgraphMessageId);
+    if (!msg?.subgraph || msg.subgraph.node?.length === 0) {
+      setSelectedSubgraphMessageId(null);
+    }
+  }, [messages, selectedSubgraphMessageId]);
+
+  const handleOpenSubgraph = useCallback((messageId: string) => {
+    setSelectedSubgraphMessageId(messageId);
+    setIsNetworkOpen(true);
+  }, []);
 
   // 네트워크 패널 폭(드래그로 조절 + localStorage 저장)
   const [networkPanelMinWidth, setNetworkPanelMinWidth] = useState(480);
@@ -205,7 +233,10 @@ export default function ChatWindow({
   };
 
   // 네트워크 데이터 유무 확인
-  const hasNetworkData = subgraphData && subgraphData.node && subgraphData.node.length > 0;
+  const hasNetworkData =
+    displayedSubgraphData &&
+    displayedSubgraphData.node &&
+    displayedSubgraphData.node.length > 0;
 
   // 새 대화 시작 핸들러
   const handleNewChat = () => {
@@ -340,6 +371,8 @@ export default function ChatWindow({
               messages={messages}
               streamingMessage={streamingMessage}
               onFeedback={handleFeedback}
+              onOpenSubgraph={handleOpenSubgraph}
+              selectedSubgraphMessageId={selectedSubgraphMessageId}
               onLoadMore={loadMore}
               hasMore={hasMore}
               isLoadingMore={isLoadingMore}
@@ -390,7 +423,7 @@ export default function ChatWindow({
         style={{ width: isNetworkOpen ? networkPanelWidth : 0 }}
       >
         <div className="h-full w-full">
-          <StockForceGraph subgraphData={subgraphData} />
+          <StockForceGraph subgraphData={displayedSubgraphData} />
         </div>
       </div>
     </div>

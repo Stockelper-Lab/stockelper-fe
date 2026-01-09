@@ -309,6 +309,11 @@ export function StockForceGraph({ subgraphData }: StockForceGraphProps) {
     null
   );
 
+  // 그래프 데이터가 바뀌면 이전 선택 상태를 초기화
+  useEffect(() => {
+    setSelectedNode(null);
+  }, [subgraphData]);
+
   const graphData = useMemo(() => {
     if (!subgraphData || !subgraphData.node || subgraphData.node.length === 0) {
       return { nodes: [], links: [] } as { nodes: ForceNode[]; links: ForceLink[] };

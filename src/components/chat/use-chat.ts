@@ -212,14 +212,14 @@ export function useChatBot(options?: ChatBotOptions) {
         if (!loadMore) {
           const allMessages = newMessages;
 
-          // 마지막 서브그래프 데이터가 있으면 설정
-          const lastSubgraphMsg = [...allMessages].find((msg) => msg.subgraph);
+          // 마지막(최신) 서브그래프 데이터가 있으면 설정
+          const lastSubgraphMsg = [...allMessages].reverse().find((msg) => msg.subgraph);
           if (lastSubgraphMsg?.subgraph) {
             setSubgraphData(lastSubgraphMsg.subgraph);
           }
 
           // 마지막 거래 액션 데이터가 있으면 설정
-          const lastTradingActionMsg = [...allMessages].find(
+          const lastTradingActionMsg = [...allMessages].reverse().find(
             (msg) => msg.trading_action
           );
           if (lastTradingActionMsg?.trading_action) {
@@ -252,14 +252,14 @@ export function useChatBot(options?: ChatBotOptions) {
   // 초기 메시지에서 서브그래프 및 거래 액션 데이터 설정
   useEffect(() => {
     if (initialMessages.length > 0) {
-      // 마지막 서브그래프 데이터가 있으면 설정
-      const lastSubgraphMsg = [...initialMessages].find((msg) => msg.subgraph);
+      // 마지막(최신) 서브그래프 데이터가 있으면 설정
+      const lastSubgraphMsg = [...initialMessages].reverse().find((msg) => msg.subgraph);
       if (lastSubgraphMsg?.subgraph) {
         setSubgraphData(lastSubgraphMsg.subgraph);
       }
 
       // 마지막 거래 액션 데이터가 있으면 설정
-      const lastTradingActionMsg = [...initialMessages].find(
+      const lastTradingActionMsg = [...initialMessages].reverse().find(
         (msg) => msg.trading_action
       );
       if (lastTradingActionMsg?.trading_action) {

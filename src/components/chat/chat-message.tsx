@@ -1,12 +1,21 @@
 import { MarkdownRenderer } from "./markdown-renderer";
 import { Message } from "./types";
+import { cn } from "@/lib/utils";
+import { Network } from "lucide-react";
 
 interface ChatMessageProps {
   message: Message;
   onFeedback?: (messageId: string, feedback: boolean) => void;
+  onOpenSubgraph?: (messageId: string) => void;
+  isSubgraphSelected?: boolean;
 }
 
-export function ChatMessage({ message, onFeedback }: ChatMessageProps) {
+export function ChatMessage({
+  message,
+  onFeedback,
+  onOpenSubgraph,
+  isSubgraphSelected,
+}: ChatMessageProps) {
   let containerStyle = "";
   let textStyle = "";
   let alignment = "";
@@ -48,9 +57,21 @@ export function ChatMessage({ message, onFeedback }: ChatMessageProps) {
   // Buttons are shown only for active 'question' role messages.
   const showButtons = message.role === "question";
 
+  const hasSubgraph = !!(message.subgraph && message.subgraph.node?.length > 0);
+  const showSubgraphButton =
+    message.role === "assistant" && hasSubgraph && !!onOpenSubgraph;
+  const showSelectedRing = message.role === "assistant" && !!isSubgraphSelected;
+
   return (
     <div className={`flex ${alignment}`}>
-      <div className={`max-w-[85%] rounded-xl p-3 ${containerStyle}`}>
+      <div
+        className={cn(
+          "max-w-[85%] rounded-xl p-3",
+          containerStyle,
+          showSelectedRing &&
+            "ring-2 ring-indigo-500 ring-offset-2 ring-offset-white dark:ring-offset-zinc-900"
+        )}
+      >
         {message.role === "user" || message.role === "question" ? (
           // User messages and active Question messages are rendered as plain text <p>
           <p className={textStyle}>{message.content}</p>
@@ -89,9 +110,32 @@ export function ChatMessage({ message, onFeedback }: ChatMessageProps) {
             </div>
           )}
 
-        <p className="mt-1 text-right text-[10px] opacity-60">
-          {new Date(message.timestamp).toLocaleTimeString()}
-        </p>
+        {showSubgraphButton ? (
+          <div className="mt-2 flex items-center justify-between gap-2">
+            <button
+              type="button"
+              onClick={() => onOpenSubgraph?.(message.id)}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-[11px] font-medium transition-colors",
+                isSubgraphSelected
+                  ? "border-indigo-300 bg-indigo-50 text-indigo-700 dark:border-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-200"
+                  : "border-zinc-200 bg-white/70 text-zinc-700 hover:bg-white dark:border-zinc-600 dark:bg-zinc-800/60 dark:text-zinc-200 dark:hover:bg-zinc-800"
+              )}
+              title="이 응답의 서브그래프를 관계 네트워크 패널에서 보기"
+            >
+              <Network size={12} />
+              {isSubgraphSelected ? "서브그래프 표시중" : "서브그래프 보기"}
+            </button>
+
+            <p className="text-right text-[10px] opacity-60">
+              {new Date(message.timestamp).toLocaleTimeString()}
+            </p>
+          </div>
+        ) : (
+          <p className="mt-1 text-right text-[10px] opacity-60">
+            {new Date(message.timestamp).toLocaleTimeString()}
+          </p>
+        )}
       </div>
     </div>
   );

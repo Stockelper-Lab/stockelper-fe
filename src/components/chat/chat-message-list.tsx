@@ -9,6 +9,8 @@ interface ChatMessageListProps {
   messages: Message[];
   streamingMessage: Message | null;
   onFeedback?: (messageId: string, feedback: boolean) => void;
+  onOpenSubgraph?: (messageId: string) => void;
+  selectedSubgraphMessageId?: string | null;
   onLoadMore?: () => void;
   hasMore?: boolean;
   isLoadingMore?: boolean;
@@ -34,6 +36,8 @@ export function ChatMessageList({
   messages,
   streamingMessage,
   onFeedback,
+  onOpenSubgraph,
+  selectedSubgraphMessageId,
   onLoadMore,
   hasMore = false,
   isLoadingMore = false,
@@ -246,6 +250,11 @@ export function ChatMessageList({
           <ChatMessage
             message={message}
             onFeedback={onFeedback}
+            onOpenSubgraph={onOpenSubgraph}
+            isSubgraphSelected={
+              !!selectedSubgraphMessageId &&
+              selectedSubgraphMessageId === message.id
+            }
           />
         </div>
       ))}
