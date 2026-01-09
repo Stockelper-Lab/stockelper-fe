@@ -5,7 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { ArrowLeft, Edit2, Network, PanelRightClose, PanelRightOpen, Trash2 } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ChatInput } from "./chat-input";
 import { ChatMessageList } from "./chat-message-list";
 import { ConversationList } from "./conversation-list";
@@ -13,6 +13,23 @@ import { StockForceGraph } from "./stock-force-graph";
 import { Message } from "./types";
 import { TypingTitle } from "./typing-title";
 import { useChatBot } from "./use-chat";
+
+const NETWORK_PANEL_WIDTH_STORAGE_KEY = "stockelper.chat.networkPanelWidth";
+
+function clampNumber(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
+}
+
+function getNetworkPanelMinWidth(viewportWidth: number): number {
+  // 기존 디자인( lg: 480px, xl: 560px )을 최소 폭으로 사용
+  return viewportWidth >= 1280 ? 560 : 480;
+}
+
+function getNetworkPanelMaxWidth(viewportWidth: number, minWidth: number): number {
+  // 너무 넓어져서 채팅 영역이 사라지는 것을 방지
+  const max = Math.min(960, viewportWidth - 360);
+  return Math.max(minWidth, max);
+}
 
 interface ChatWindowProps {
   conversationId?: string;
@@ -93,6 +110,100 @@ export default function ChatWindow({
   // 네트워크 패널 토글 상태
   const [isNetworkOpen, setIsNetworkOpen] = useState(false);
 
+  // 네트워크 패널 폭(드래그로 조절 + localStorage 저장)
+  const [networkPanelMinWidth, setNetworkPanelMinWidth] = useState(480);
+  const [networkPanelMaxWidth, setNetworkPanelMaxWidth] = useState(960);
+  const [networkPanelWidth, setNetworkPanelWidth] = useState(480);
+  const [isResizingNetworkPanel, setIsResizingNetworkPanel] = useState(false);
+  const resizeStateRef = useRef<{ startX: number; startWidth: number } | null>(
+    null
+  );
+  const hasLoadedNetworkPanelWidthRef = useRef(false);
+
+  useEffect(() => {
+    const init = () => {
+      const min = getNetworkPanelMinWidth(window.innerWidth);
+      const max = getNetworkPanelMaxWidth(window.innerWidth, min);
+      setNetworkPanelMinWidth(min);
+      setNetworkPanelMaxWidth(max);
+
+      let initialWidth = min;
+      try {
+        const saved = Number(localStorage.getItem(NETWORK_PANEL_WIDTH_STORAGE_KEY));
+        if (Number.isFinite(saved)) {
+          initialWidth = clampNumber(saved, min, max);
+        }
+      } catch {
+        // localStorage 접근 실패 시 기본값 사용
+      }
+
+      setNetworkPanelWidth(initialWidth);
+      hasLoadedNetworkPanelWidthRef.current = true;
+    };
+
+    const handleResize = () => {
+      const min = getNetworkPanelMinWidth(window.innerWidth);
+      const max = getNetworkPanelMaxWidth(window.innerWidth, min);
+      setNetworkPanelMinWidth(min);
+      setNetworkPanelMaxWidth(max);
+      setNetworkPanelWidth((prev) => clampNumber(prev, min, max));
+    };
+
+    init();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  useEffect(() => {
+    if (!hasLoadedNetworkPanelWidthRef.current) return;
+    if (isResizingNetworkPanel) return;
+    try {
+      localStorage.setItem(
+        NETWORK_PANEL_WIDTH_STORAGE_KEY,
+        String(networkPanelWidth)
+      );
+    } catch {
+      // localStorage 저장 실패는 무시
+    }
+  }, [isResizingNetworkPanel, networkPanelWidth]);
+
+  const stopNetworkPanelResize = () => {
+    resizeStateRef.current = null;
+    setIsResizingNetworkPanel(false);
+    document.body.style.cursor = "";
+    document.body.style.userSelect = "";
+  };
+
+  const handleNetworkPanelResizeStart = (
+    e: React.PointerEvent<HTMLDivElement>
+  ) => {
+    if (!isNetworkOpen) return;
+    e.preventDefault();
+    setIsResizingNetworkPanel(true);
+    resizeStateRef.current = { startX: e.clientX, startWidth: networkPanelWidth };
+    e.currentTarget.setPointerCapture(e.pointerId);
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+  };
+
+  const handleNetworkPanelResizeMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!resizeStateRef.current) return;
+    const deltaX = e.clientX - resizeStateRef.current.startX;
+    const nextWidth = clampNumber(
+      resizeStateRef.current.startWidth - deltaX,
+      networkPanelMinWidth,
+      networkPanelMaxWidth
+    );
+    setNetworkPanelWidth(nextWidth);
+  };
+
+  const handleNetworkPanelResizeEnd = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
+    stopNetworkPanelResize();
+  };
+
   // 네트워크 데이터 유무 확인
   const hasNetworkData = subgraphData && subgraphData.node && subgraphData.node.length > 0;
 
@@ -134,8 +245,7 @@ export default function ChatWindow({
     <div className="h-full flex">
       {/* 채팅 영역 */}
       <div className={cn(
-        "flex-1 flex flex-col bg-zinc-50 dark:bg-zinc-900 overflow-hidden transition-all duration-300",
-        isNetworkOpen && "lg:mr-4"
+        "flex-1 min-w-0 flex flex-col bg-zinc-50 dark:bg-zinc-900 overflow-hidden transition-all duration-300"
       )}>
         {/* 채팅 헤더 */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-800/50">
@@ -243,14 +353,43 @@ export default function ChatWindow({
         </div>
       </div>
 
+      {/* 패널 리사이즈 핸들 */}
+      {isNetworkOpen ? (
+        <div
+          className={cn(
+            "hidden lg:flex items-center justify-center w-3 cursor-col-resize select-none touch-none",
+            isResizingNetworkPanel ? "bg-indigo-500/10" : "bg-transparent"
+          )}
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="관계 네트워크 패널 크기 조절"
+          onPointerDown={handleNetworkPanelResizeStart}
+          onPointerMove={handleNetworkPanelResizeMove}
+          onPointerUp={handleNetworkPanelResizeEnd}
+          onPointerCancel={handleNetworkPanelResizeEnd}
+          onLostPointerCapture={stopNetworkPanelResize}
+        >
+          <div
+            className={cn(
+              "h-full w-px bg-zinc-200 dark:bg-zinc-800",
+              isResizingNetworkPanel && "bg-indigo-500"
+            )}
+          />
+        </div>
+      ) : null}
+
       {/* 관계 네트워크 사이드 패널 */}
       <div
         className={cn(
-          "hidden lg:block transition-all duration-300 overflow-hidden",
-          isNetworkOpen ? "w-[480px] xl:w-[560px] opacity-100" : "w-0 opacity-0"
+          "hidden lg:block h-full overflow-hidden",
+          isResizingNetworkPanel
+            ? "transition-none"
+            : "transition-[width,opacity] duration-300",
+          isNetworkOpen ? "opacity-100" : "opacity-0"
         )}
+        style={{ width: isNetworkOpen ? networkPanelWidth : 0 }}
       >
-        <div className="h-full w-[480px] xl:w-[560px]">
+        <div className="h-full w-full">
           <StockForceGraph subgraphData={subgraphData} />
         </div>
       </div>

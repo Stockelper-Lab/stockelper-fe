@@ -1,15 +1,15 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import ForceGraph2D from "react-force-graph-2d";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ForceGraphMethods, LinkObject, NodeObject } from "react-force-graph-2d";
+import ForceGraph2D from "react-force-graph-2d";
 
-import type { Subgraph } from "./types";
 import type {
   NodeProperties,
   SelectedGraphNode,
 } from "./node-properties-panel";
 import { NodePropertiesPanel } from "./node-properties-panel";
+import type { Subgraph } from "./types";
 
 type ForceNode = {
   id: string;
@@ -37,6 +37,90 @@ const GRAPH_STYLE = {
   chargeStrength: -320,
   linkDistance: 140,
 } as const;
+
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function formatTooltipValue(value: string | number | null): string {
+  if (value === null) return "-";
+  if (typeof value === "number") return value.toLocaleString();
+  const trimmed = normalizeText(value);
+  if (trimmed.length <= 140) return trimmed;
+  return `${trimmed.slice(0, 140)}…`;
+}
+
+function buildNodeTooltip(node: ForceNode): string {
+  const type = node.nodeType ? normalizeText(node.nodeType) : "";
+  const propsEntries = Object.entries(node.properties ?? {})
+    .filter(([, v]) => v !== null && v !== undefined && String(v).trim() !== "")
+    .slice(0, 12);
+
+  const propsHtml =
+    propsEntries.length === 0
+      ? `<div style="margin-top:6px;color:#64748b;">properties 없음</div>`
+      : `<div style="margin-top:6px;display:grid;grid-template-columns:auto 1fr;column-gap:8px;row-gap:4px;max-width:420px;">
+${propsEntries
+  .map(([k, v]) => {
+    const key = escapeHtml(k);
+    const val = escapeHtml(formatTooltipValue(v));
+    return `<div style="color:#64748b;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,\\\"Liberation Mono\\\",\\\"Courier New\\\",monospace;font-size:11px;">${key}</div><div style="color:#0f172a;font-size:12px;word-break:break-word;">${val}</div>`;
+  })
+  .join("")}
+</div>`;
+
+  const placeholderBadge = node.isPlaceholder
+    ? `<span style="display:inline-block;margin-left:6px;padding:1px 6px;border-radius:999px;background:rgba(245,158,11,0.15);color:rgb(180,83,9);font-size:11px;">임시</span>`
+    : "";
+
+  const idHtml = node.id
+    ? `<div style="margin-top:4px;color:#94a3b8;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,\\\"Liberation Mono\\\",\\\"Courier New\\\",monospace;font-size:11px;word-break:break-all;">${escapeHtml(
+        node.id
+      )}</div>`
+    : "";
+
+  return `
+<div style="padding:8px 10px;line-height:1.35;background:rgba(255,255,255,0.96);border:1px solid rgba(226,232,240,0.95);border-radius:12px;box-shadow:0 12px 28px rgba(0,0,0,0.28);">
+  <div style="font-weight:600;color:#0f172a;">${escapeHtml(
+    normalizeText(node.label)
+  )}${placeholderBadge}</div>
+  ${
+    type
+      ? `<div style="margin-top:2px;color:#475569;font-size:12px;">${escapeHtml(
+          type
+        )}</div>`
+      : ""
+  }
+  ${idHtml}
+  ${propsHtml}
+</div>
+`.trim();
+}
+
+function buildLinkTooltip(link: ForceLink & { source: unknown; target: unknown }): string {
+  const sourceLabel =
+    typeof link.source === "object" && link.source
+      ? (link.source as ForceNode).label
+      : String(link.source);
+  const targetLabel =
+    typeof link.target === "object" && link.target
+      ? (link.target as ForceNode).label
+      : String(link.target);
+
+  return `
+<div style="padding:8px 10px;line-height:1.35;max-width:420px;background:rgba(255,255,255,0.96);border:1px solid rgba(226,232,240,0.95);border-radius:12px;box-shadow:0 12px 28px rgba(0,0,0,0.28);">
+  <div style="font-weight:600;color:#0f172a;">${escapeHtml(link.label)}</div>
+  <div style="margin-top:4px;color:#334155;font-size:12px;word-break:break-word;">
+    ${escapeHtml(normalizeText(sourceLabel))} → ${escapeHtml(normalizeText(targetLabel))}
+  </div>
+</div>
+`.trim();
+}
 
 function normalizeText(value: string): string {
   return value.normalize("NFKC").trim().replace(/\s+/g, " ");
@@ -179,13 +263,29 @@ function convertSubgraphToForceGraph(subgraph: Subgraph): {
 }
 
 function useElementSize<T extends HTMLElement>() {
-  const ref = useRef<T | null>(null);
+  const [element, setElement] = useState<T | null>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
 
-  useEffect(() => {
-    if (!ref.current) return;
+  const ref = useCallback((node: T | null) => {
+    setElement(node);
+  }, []);
 
-    const el = ref.current;
+  useEffect(() => {
+    if (!element) return;
+
+    const measure = () => {
+      const { width, height } = element.getBoundingClientRect();
+      setSize({ width: Math.floor(width), height: Math.floor(height) });
+    };
+
+    // 최초 1회는 바로 측정 (ResizeObserver는 초기 콜백이 늦을 수 있음)
+    measure();
+
+    if (typeof ResizeObserver === "undefined") {
+      window.addEventListener("resize", measure);
+      return () => window.removeEventListener("resize", measure);
+    }
+
     const ro = new ResizeObserver((entries) => {
       const entry = entries[0];
       if (!entry) return;
@@ -193,9 +293,9 @@ function useElementSize<T extends HTMLElement>() {
       setSize({ width: Math.floor(width), height: Math.floor(height) });
     });
 
-    ro.observe(el);
+    ro.observe(element);
     return () => ro.disconnect();
-  }, []);
+  }, [element]);
 
   return { ref, size };
 }
@@ -259,10 +359,10 @@ export function StockForceGraph({ subgraphData }: StockForceGraphProps) {
       </div>
 
       {hasData ? (
-        <div className="flex-1 w-full flex flex-col min-h-0">
+        <div className="flex-1 w-full min-h-0">
           <div
             ref={graphRef}
-            className="flex-1 min-h-[320px] bg-white dark:bg-zinc-900"
+            className="relative h-full min-h-[320px] bg-white dark:bg-zinc-900"
           >
             {size.width > 0 && size.height > 0 ? (
               <ForceGraph2D
@@ -273,9 +373,9 @@ export function StockForceGraph({ subgraphData }: StockForceGraphProps) {
                 backgroundColor="rgba(0,0,0,0)"
                 nodeLabel={(n) => {
                   const node = n as ForceNode;
-                  const type = node.nodeType ? normalizeText(node.nodeType) : "";
-                  return type ? `${node.label} (${type})` : node.label;
+                  return buildNodeTooltip(node);
                 }}
+                linkLabel={(l) => buildLinkTooltip(l as ForceLink & { source: unknown; target: unknown })}
                 nodeCanvasObjectMode={() => "replace"}
                 nodeCanvasObject={(n, ctx) => {
                   const node = n as ForceNode & { x: number; y: number };
@@ -376,22 +476,25 @@ export function StockForceGraph({ subgraphData }: StockForceGraphProps) {
                 onBackgroundClick={() => setSelectedNode(null)}
               />
             ) : null}
-          </div>
 
-          {selectedNode ? (
-            <div className="border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50">
-              <NodePropertiesPanel
-                node={selectedNode}
-                onClose={() => setSelectedNode(null)}
-              />
-            </div>
-          ) : (
-            <div className="py-3 flex gap-4 justify-center flex-wrap border-t border-zinc-100 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800/50">
-              <span className="text-[11px] text-zinc-500 dark:text-zinc-400">
-                노드를 클릭하면 속성을 볼 수 있어요
-              </span>
-            </div>
-          )}
+            {/* 오버레이: 속성 패널(캔버스 크기 영향 없음) */}
+            {selectedNode ? (
+              <div className="pointer-events-none absolute left-3 right-3 top-3 flex justify-end">
+                <div className="pointer-events-auto w-full sm:w-[420px] max-h-[70%] overflow-auto rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white/95 dark:bg-zinc-900/90 shadow-lg backdrop-blur">
+                  <NodePropertiesPanel
+                    node={selectedNode}
+                    onClose={() => setSelectedNode(null)}
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="pointer-events-none absolute inset-x-0 bottom-3 flex justify-center">
+                <div className="pointer-events-auto rounded-full border border-zinc-200 dark:border-zinc-700 bg-white/90 dark:bg-zinc-900/80 px-3 py-1 text-[11px] text-zinc-600 dark:text-zinc-300 shadow-sm backdrop-blur">
+                  노드를 클릭하면 속성을 볼 수 있어요
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       ) : (
         <div className="flex items-center justify-center flex-1 rounded-lg bg-zinc-50 dark:bg-zinc-800 m-4">
