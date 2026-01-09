@@ -26,6 +26,18 @@ type ForceLink = {
   label: string;
 };
 
+const GRAPH_STYLE = {
+  nodeRadius: 26,
+  nodePointerRadius: 30,
+  nodeFontSize: 14,
+  linkFontSize: 11,
+  linkLabelPadding: 3,
+  linkLabelOffset: 3,
+  linkArrowLength: 9,
+  chargeStrength: -320,
+  linkDistance: 140,
+} as const;
+
 function normalizeText(value: string): string {
   return value.normalize("NFKC").trim().replace(/\s+/g, " ");
 }
@@ -220,12 +232,12 @@ export function StockForceGraph({ subgraphData }: StockForceGraphProps) {
 
     const charge = fgRef.current.d3Force("charge");
     if (charge?.strength) {
-      charge.strength(-260);
+      charge.strength(GRAPH_STYLE.chargeStrength);
     }
 
     const link = fgRef.current.d3Force("link");
     if (link?.distance) {
-      link.distance(110);
+      link.distance(GRAPH_STYLE.linkDistance);
     }
 
     fgRef.current.d3ReheatSimulation();
@@ -267,7 +279,7 @@ export function StockForceGraph({ subgraphData }: StockForceGraphProps) {
                 nodeCanvasObjectMode={() => "replace"}
                 nodeCanvasObject={(n, ctx) => {
                   const node = n as ForceNode & { x: number; y: number };
-                  const r = 18;
+                  const r = GRAPH_STYLE.nodeRadius;
                   const label = getCompactNodeLabel(node);
                   const fill = getNodeColor(node.nodeType);
 
@@ -281,7 +293,7 @@ export function StockForceGraph({ subgraphData }: StockForceGraphProps) {
                   ctx.stroke();
 
                   // 텍스트
-                  const fontSize = 11;
+                  const fontSize = GRAPH_STYLE.nodeFontSize;
                   ctx.font = `${fontSize}px ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial`;
                   ctx.textAlign = "center";
                   ctx.textBaseline = "middle";
@@ -290,13 +302,13 @@ export function StockForceGraph({ subgraphData }: StockForceGraphProps) {
                 }}
                 nodePointerAreaPaint={(n, color, ctx) => {
                   const node = n as ForceNode & { x: number; y: number };
-                  const r = 20;
+                  const r = GRAPH_STYLE.nodePointerRadius;
                   ctx.fillStyle = color;
                   ctx.beginPath();
                   ctx.arc(node.x, node.y, r, 0, 2 * Math.PI, false);
                   ctx.fill();
                 }}
-                linkDirectionalArrowLength={6}
+                linkDirectionalArrowLength={GRAPH_STYLE.linkArrowLength}
                 linkDirectionalArrowRelPos={1}
                 linkColor={() => "rgba(100, 116, 139, 0.85)"}
                 linkWidth={1}
@@ -315,7 +327,7 @@ export function StockForceGraph({ subgraphData }: StockForceGraphProps) {
                   const midY = (start.y + end.y) / 2;
                   const angle = Math.atan2(end.y - start.y, end.x - start.x);
 
-                  const fontSize = 9;
+                  const fontSize = GRAPH_STYLE.linkFontSize;
                   ctx.save();
                   ctx.translate(midX, midY);
                   ctx.rotate(angle);
@@ -327,19 +339,28 @@ export function StockForceGraph({ subgraphData }: StockForceGraphProps) {
 
                   const shown = text.length > 20 ? `${text.slice(0, 19)}…` : text;
                   const metrics = ctx.measureText(shown);
-                  const padding = 2;
+                  const padding = GRAPH_STYLE.linkLabelPadding;
                   const boxW = metrics.width + padding * 2;
                   const boxH = fontSize + padding * 2;
 
                   // 배경 박스
                   ctx.fillStyle = "rgba(255, 255, 255, 0.72)";
-                  ctx.fillRect(-boxW / 2, -boxH - 2, boxW, boxH);
+                  ctx.fillRect(
+                    -boxW / 2,
+                    -boxH - GRAPH_STYLE.linkLabelOffset,
+                    boxW,
+                    boxH
+                  );
 
                   // 텍스트
                   ctx.fillStyle = "rgba(30, 41, 59, 0.85)";
                   ctx.textAlign = "center";
                   ctx.textBaseline = "middle";
-                  ctx.fillText(shown, 0, -boxH / 2 - 2);
+                  ctx.fillText(
+                    shown,
+                    0,
+                    -boxH / 2 - GRAPH_STYLE.linkLabelOffset
+                  );
                   ctx.restore();
                 }}
                 onNodeClick={(n) => {
