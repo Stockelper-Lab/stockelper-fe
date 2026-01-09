@@ -51,7 +51,7 @@ const navItems = [
 
 export function AppSidebar() {
   const pathname = usePathname();
-  const { open, setOpen } = useSidebar();
+  const { open } = useSidebar();
   const { logout } = useUser();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 

@@ -48,7 +48,7 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
           ),
           // em (이탤릭체) 명시적 정의
           em: ({ children }) => <em className="italic">{children}</em>,
-          code: ({ className, children, ...props }) => {
+          code: ({ children, ...props }) => {
             const inline = "inline" in props && props.inline;
             if (inline) {
               return (

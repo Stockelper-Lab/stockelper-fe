@@ -5,5 +5,3 @@ export * from "./QuestionTitle";
 export * from "./RadioGroup";
 export * from "./RadioOption";
 export * from "./SubmitButton";
-export * from "./SurveyForm";
-export * from "./SurveyHeader";

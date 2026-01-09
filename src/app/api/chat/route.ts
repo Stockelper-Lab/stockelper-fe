@@ -1,36 +1,5 @@
 import { NextRequest } from "next/server";
 
-// LLM API 응답 타입 정의
-interface LLMApiResponse {
-  message: string;
-  subgraph?: {
-    node: Array<{
-      node_type: string;
-      node_name: string;
-      properties: Record<string, string | number | null>;
-    }>;
-    relation: Array<{
-      relationship: string;
-      start: {
-        name: string;
-        type: string;
-      };
-      end: {
-        name: string;
-        type: string;
-      };
-    }>;
-  };
-  trading_action?: {
-    order_side?: "buy" | "sell";
-    order_type?: "market" | "limit";
-    stock_code?: string;
-    order_price?: number | null;
-    order_quantity?: number;
-  } | null;
-  error?: string | null;
-}
-
 // Next 서버를 통한 LLM API 호출 (스트리밍)
 export async function POST(req: NextRequest) {
   try {

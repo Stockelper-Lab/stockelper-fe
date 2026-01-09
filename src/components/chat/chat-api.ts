@@ -34,14 +34,6 @@ function formatStreamingText(text: string): string {
   return formatted;
 }
 
-// API 응답 타입 정의
-interface ApiResponse {
-  message: string;
-  subgraph?: Subgraph;
-  trading_action?: TradingAction | null;
-  error?: string | null;
-}
-
 // SSE 이벤트 타입 정의
 interface SSEEvent {
   type: "progress" | "delta" | "final";

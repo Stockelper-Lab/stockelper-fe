@@ -41,6 +41,7 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-hook-form": "^7.55.0",
+    "react-force-graph-2d": "^1.29.0",
     "react-markdown": "^10.1.0",
     "reactflow": "^11.11.4",
     "rehype-raw": "^7.0.0",

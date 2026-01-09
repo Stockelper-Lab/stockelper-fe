@@ -9,7 +9,7 @@ import { useState } from "react";
 import { ChatInput } from "./chat-input";
 import { ChatMessageList } from "./chat-message-list";
 import { ConversationList } from "./conversation-list";
-import { StockChart } from "./stock-chart";
+import { StockForceGraph } from "./stock-force-graph";
 import { Message } from "./types";
 import { TypingTitle } from "./typing-title";
 import { useChatBot } from "./use-chat";
@@ -251,7 +251,7 @@ export default function ChatWindow({
         )}
       >
         <div className="h-full w-[480px] xl:w-[560px]">
-          <StockChart subgraphData={subgraphData} />
+          <StockForceGraph subgraphData={subgraphData} />
         </div>
       </div>
     </div>

@@ -18,7 +18,6 @@ import {
   sendFeedback as apiSendFeedback,
   sendMessage as apiSendMessage,
   isValidTradingAction,
-  OnProgressCallback,
 } from "./chat-api";
 import { Message, Subgraph, TradingAction, PROGRESS_STEP_LABELS } from "./types";
 
@@ -636,6 +635,17 @@ export function useChatBot(options?: ChatBotOptions) {
                   timestamp: prev?.timestamp || new Date(),
                   progressStep: progressLabel,
                 }));
+              });
+            } else if (status === "end" && currentProgressStep === step) {
+              currentProgressStep = null;
+              flushSync(() => {
+                setStreamingMessage((prev) => {
+                  if (!prev) return prev;
+                  return {
+                    ...prev,
+                    progressStep: null,
+                  };
+                });
               });
             }
           }

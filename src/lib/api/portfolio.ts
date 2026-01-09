@@ -50,8 +50,8 @@ export async function getPortfolioRecommendationHistory(): Promise<PortfolioReco
     return [];
   }
 
-  const data = await response.json();
-  return data.map((item: any) => ({
+  const data = (await response.json()) as PortfolioRecommendationHistory[];
+  return data.map((item) => ({
     id: item.id,
     userId: item.userId,
     jobId: item.jobId || null,
