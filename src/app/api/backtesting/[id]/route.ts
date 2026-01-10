@@ -1,7 +1,7 @@
 import { validateSession } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 
-import { loadBacktestingFromFile } from "../backtesting-data";
+import { getBacktestingById } from "../backtesting-data";
 
 // 특정 백테스팅 결과 조회
 export async function GET(
@@ -30,8 +30,7 @@ export async function GET(
     const userIdNum = parseInt(userId, 10);
     const backtestingId = (await params).id;
 
-    const items = await loadBacktestingFromFile();
-    const found = items.find((item) => item.id === backtestingId);
+    const found = await getBacktestingById(backtestingId);
 
     if (!found) {
       return NextResponse.json(
@@ -56,4 +55,3 @@ export async function GET(
     );
   }
 }
-
