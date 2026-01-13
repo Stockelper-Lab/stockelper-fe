@@ -1,0 +1,25 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+    expose:
+      - "3000"
+    networks:
+      - side-project-network
+    # 외부 DB를 사용하므로 기본은 앱만 실행합니다.
+    # 마이그레이션이 필요하면 아래로 바꾸세요:
+    # command: sh -c "pnpm prisma:migrate-deploy && pnpm exec next start -p 3000"
+    restart: unless-stopped
+
+# (선택) 이전에 로컬 DB 서비스를 띄웠다면 제거:
+# docker compose down --remove-orphans
+
+networks:
+  side-project-network:
+    external: true
+
