@@ -1,7 +1,7 @@
 import { validateSession } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 
-import { loadBacktestingFromFile } from "./backtesting-data";
+import { getBacktestingByUserId } from "./backtesting-data";
 
 // 백테스팅 이력 조회
 export async function GET(req: NextRequest) {
@@ -25,15 +25,7 @@ export async function GET(req: NextRequest) {
     }
 
     const userIdNum = parseInt(userId, 10);
-    const items = await loadBacktestingFromFile();
-
-    const history = items
-      .filter((item) => item.userId === userIdNum)
-      .sort(
-        (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      )
-      .slice(0, 50);
+    const history = await getBacktestingByUserId(userIdNum);
 
     return NextResponse.json(history);
   } catch (error) {
@@ -47,4 +39,3 @@ export async function GET(req: NextRequest) {
     );
   }
 }
-
